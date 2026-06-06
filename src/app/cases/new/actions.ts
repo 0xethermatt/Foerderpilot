@@ -2,8 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/safe-client';
+import { createServiceClient } from '@/lib/supabase/service-client';
+import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
 
 // Dev fallback — matches the UUID in supabase/seed.sql
 const DEV_COMPANY_ID =
@@ -97,11 +97,11 @@ export async function createFundingCaseAction(
   _prevState: CreateCaseState,
   formData: FormData,
 ): Promise<CreateCaseState> {
-  // Guard: Supabase not configured
-  if (!isSupabaseConfigured()) {
+  // Guard: service role not configured
+  if (!isServiceRoleConfigured()) {
     return {
       message:
-        'Supabase ist nicht konfiguriert. Bitte .env.local mit NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY befüllen.',
+        'Datenbankzugang nicht konfiguriert. Bitte .env.local mit NEXT_PUBLIC_SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY befüllen.',
     };
   }
 
@@ -123,7 +123,7 @@ export async function createFundingCaseAction(
   }
 
   const d = parsed.data;
-  const supabase = createClient();
+  const supabase = createServiceClient();
 
   // 1. Create customer
   const { data: customer, error: customerErr } = await supabase

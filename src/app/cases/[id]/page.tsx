@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
-import { createClient } from '@/lib/supabase/server';
-import { isSupabaseConfigured } from '@/lib/supabase/safe-client';
+import { createServiceClient } from '@/lib/supabase/service-client';
+import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
 import {
   BUILDING_TYPE_LABELS,
   OWNER_STATUS_LABELS,
@@ -103,7 +103,7 @@ export default async function CaseDetailPage({
 }: {
   params: { id: string };
 }) {
-  if (!isSupabaseConfigured()) {
+  if (!isServiceRoleConfigured()) {
     return (
       <div className="max-w-2xl space-y-4">
         <Link
@@ -130,7 +130,7 @@ export default async function CaseDetailPage({
     );
   }
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
 
   const { data: fundingCase, error } = await supabase
     .from('funding_cases')
