@@ -1,0 +1,51 @@
+name: Deploy to Vercel
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - claude/foerderpilot-v0-setup-pn9qv
+
+jobs:
+  deploy:
+    name: Deploy preview to Vercel
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+
+      - name: Set Supabase env vars on Vercel project
+        run: |
+          vercel env add NEXT_PUBLIC_SUPABASE_URL production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" || true
+          vercel env add NEXT_PUBLIC_SUPABASE_URL preview --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" || true
+          vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" || true
+          vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY preview --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" || true
+          vercel env add SUPABASE_SERVICE_ROLE_KEY production --token=$VERCEL_TOKEN <<< "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" || true
+          vercel env add SUPABASE_SERVICE_ROLE_KEY preview --token=$VERCEL_TOKEN <<< "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" || true
+          vercel env add DEFAULT_COMPANY_ID production --token=$VERCEL_TOKEN <<< "00000000-0000-0000-0000-000000000001" || true
+          vercel env add DEFAULT_COMPANY_ID preview --token=$VERCEL_TOKEN <<< "00000000-0000-0000-0000-000000000001" || true
+
+      - name: Build project
+        run: vercel build --token=$VERCEL_TOKEN
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token=$VERCEL_TOKEN)
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $URL"
+
+      - name: Print preview URL
+        run: echo "Preview URL ${{ steps.deploy.outputs.url }}"
