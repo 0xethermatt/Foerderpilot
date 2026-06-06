@@ -17,6 +17,23 @@ export type FundingCaseStatus =
 
 export type RiskLevel = 'green' | 'yellow' | 'red';
 
+// ─── Building & Heating ───────────────────────────────────────────────────────
+
+export type BuildingType = 'EFH' | 'MFH' | 'DHH' | 'RH' | 'WHG';
+
+export type OwnerStatus = 'owner' | 'owner_community' | 'other';
+
+export type CurrentHeatingType =
+  | 'gas'
+  | 'oil'
+  | 'electric'
+  | 'district_heat'
+  | 'heat_pump'
+  | 'pellet'
+  | 'other';
+
+export type PlannedHeatingType = 'air_water' | 'brine_water' | 'water_water';
+
 // ─── Document ─────────────────────────────────────────────────────────────────
 
 export type DocumentType =
@@ -67,13 +84,36 @@ export interface FundingCase {
   title: string;
   status: FundingCaseStatus;
   risk_level: RiskLevel;
-  heat_pump_type?: string;
+
+  // project location
+  project_address_street?: string;
+  project_address_postal_code?: string;
+  project_address_city?: string;
+
+  // building
+  building_type?: BuildingType;
+  housing_units?: number;
+  owner_status?: OwnerStatus;
+  self_occupied?: boolean;
+
+  // heating
+  current_heating_type?: CurrentHeatingType;
+  current_heating_year?: number;
+  planned_heating_type?: PlannedHeatingType;
+  planned_heat_pump_model?: string;
+
+  // costs
   estimated_cost?: number;
   funding_amount?: number;
+
+  // legacy field kept for mock data compatibility
+  heat_pump_type?: string;
+
   notes?: string;
   created_at: string;
   updated_at: string;
-  // joined
+
+  // joined / computed
   customer?: Customer;
   open_task_count?: number;
 }

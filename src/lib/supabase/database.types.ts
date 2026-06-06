@@ -1,13 +1,13 @@
 // ============================================================
 // Förderpilot – Supabase database types
 //
-// This file is the source of truth for database-level typing.
 // To regenerate from a live project:
-//   npx supabase gen types typescript --project-id <project-id> > src/lib/supabase/database.types.ts
+//   npx supabase gen types typescript --project-id <id> \
+//     > src/lib/supabase/database.types.ts
 //
-// The string union types below must stay in sync with:
-//   - lib/types/index.ts        (application-level types)
-//   - SQL CHECK constraints     (supabase/migrations/20250606000001_create_schema.sql)
+// Keep the string union types below in sync with:
+//   - src/lib/types/index.ts  (application types)
+//   - SQL CHECK constraints   (supabase/migrations/)
 // ============================================================
 
 export type Json =
@@ -18,7 +18,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-// ─── DB-level enums (mirrored from CHECK constraints) ────────────────────────
+// ─── DB-level value sets (mirrored from CHECK constraints) ───────────────────
 
 export type DbFundingCaseStatus =
   | 'lead_received'
@@ -36,6 +36,10 @@ export type DbFundingCaseStatus =
   | 'completed'
 
 export type DbRiskLevel = 'green' | 'yellow' | 'red'
+export type DbBuildingType = 'EFH' | 'MFH' | 'DHH' | 'RH' | 'WHG'
+export type DbOwnerStatus = 'owner' | 'owner_community' | 'other'
+export type DbCurrentHeatingType = 'gas' | 'oil' | 'electric' | 'district_heat' | 'heat_pump' | 'pellet' | 'other'
+export type DbPlannedHeatingType = 'air_water' | 'brine_water' | 'water_water'
 
 export type DbDocumentType =
   | 'energy_certificate'
@@ -55,6 +59,10 @@ export type DbAICheckType =
 export type DbAICheckResult = 'passed' | 'warning' | 'failed' | 'pending'
 
 // ─── Database interface ───────────────────────────────────────────────────────
+// GenericSchema shape required by @supabase/postgrest-js:
+//   Tables:    Record<string, { Row; Insert; Update; Relationships: [] }>
+//   Views:     Record<string, { Row }>
+//   Functions: Record<string, { Args; Returns }>
 
 export interface Database {
   public: {
@@ -78,6 +86,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
 
       customers: {
@@ -120,6 +129,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
 
       funding_cases: {
@@ -130,7 +140,17 @@ export interface Database {
           title: string
           status: DbFundingCaseStatus
           risk_level: DbRiskLevel
-          heat_pump_type: string | null
+          project_address_street: string | null
+          project_address_postal_code: string | null
+          project_address_city: string | null
+          building_type: DbBuildingType | null
+          housing_units: number | null
+          owner_status: DbOwnerStatus | null
+          self_occupied: boolean | null
+          current_heating_type: DbCurrentHeatingType | null
+          current_heating_year: number | null
+          planned_heating_type: DbPlannedHeatingType | null
+          planned_heat_pump_model: string | null
           estimated_cost: number | null
           funding_amount: number | null
           notes: string | null
@@ -144,7 +164,17 @@ export interface Database {
           title: string
           status?: DbFundingCaseStatus
           risk_level?: DbRiskLevel
-          heat_pump_type?: string | null
+          project_address_street?: string | null
+          project_address_postal_code?: string | null
+          project_address_city?: string | null
+          building_type?: DbBuildingType | null
+          housing_units?: number | null
+          owner_status?: DbOwnerStatus | null
+          self_occupied?: boolean | null
+          current_heating_type?: DbCurrentHeatingType | null
+          current_heating_year?: number | null
+          planned_heating_type?: DbPlannedHeatingType | null
+          planned_heat_pump_model?: string | null
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
@@ -158,13 +188,24 @@ export interface Database {
           title?: string
           status?: DbFundingCaseStatus
           risk_level?: DbRiskLevel
-          heat_pump_type?: string | null
+          project_address_street?: string | null
+          project_address_postal_code?: string | null
+          project_address_city?: string | null
+          building_type?: DbBuildingType | null
+          housing_units?: number | null
+          owner_status?: DbOwnerStatus | null
+          self_occupied?: boolean | null
+          current_heating_type?: DbCurrentHeatingType | null
+          current_heating_year?: number | null
+          planned_heating_type?: DbPlannedHeatingType | null
+          planned_heat_pump_model?: string | null
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
 
       documents: {
@@ -201,6 +242,7 @@ export interface Database {
           uploaded_at?: string
           created_at?: string
         }
+        Relationships: []
       }
 
       tasks: {
@@ -240,6 +282,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
 
       ai_checks: {
@@ -273,10 +316,10 @@ export interface Database {
           reviewed_at?: string | null
           created_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
-    Enums: Record<string, never>
   }
 }

@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, ClipboardList, Folder } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, CheckCircle2, ClipboardList, Folder, Plus } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
 import { mockFundingCases, mockTasks } from '@/lib/mock/data';
@@ -165,11 +166,20 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page title */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Übersicht</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Alle aktiven Fördervorbereitungsfälle auf einen Blick.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Übersicht</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Alle aktiven Fördervorbereitungsfälle auf einen Blick.
+          </p>
+        </div>
+        <Link
+          href="/cases/new"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors whitespace-nowrap"
+        >
+          <Plus className="h-4 w-4" />
+          Neuer Förderfall
+        </Link>
       </div>
 
       {/* Stats row */}
