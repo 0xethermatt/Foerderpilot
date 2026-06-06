@@ -1,0 +1,25 @@
+name: Apply Supabase Migrations
+
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Push migrations to Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref hruglvnuwidlumyfvowx
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push migrations
+        run: supabase db push --yes
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
