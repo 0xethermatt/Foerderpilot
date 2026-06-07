@@ -65,3 +65,32 @@ export const RISK_LEVEL_OPTIONS = [
   { value: 'yellow', label: 'Gelb' },
   { value: 'red',    label: 'Rot' },
 ] as const;
+
+export const DOCUMENT_TYPE_OPTIONS = [
+  { value: 'offer',                  label: 'Angebot' },
+  { value: 'contract',               label: 'Vertrag' },
+  { value: 'old_heating_photo',      label: 'Foto Altanlage' },
+  { value: 'old_heating_nameplate',  label: 'Typenschild Altanlage' },
+  { value: 'owner_proof',            label: 'Eigentumsnachweis' },
+  { value: 'bza',                    label: 'BZA' },
+  { value: 'kfw_approval',           label: 'KfW-Bewilligung' },
+  { value: 'invoice',                label: 'Rechnung' },
+  { value: 'bnd',                    label: 'BND' },
+  { value: 'other',                  label: 'Sonstiges' },
+] as const;
+
+export const DOCUMENT_STATUS_OPTIONS = [
+  { value: 'uploaded',      label: 'Hochgeladen' },
+  { value: 'needs_review',  label: 'Prüfung ausstehend' },
+  { value: 'reviewed',      label: 'Geprüft' },
+  { value: 'missing',       label: 'Fehlend' },
+  { value: 'rejected',      label: 'Abgelehnt' },
+] as const;
+
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  DOCUMENT_TYPE_OPTIONS.map(({ value, label }) => [value, label]),
+);
+
+export const DOCUMENT_STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  DOCUMENT_STATUS_OPTIONS.map(({ value, label }) => [value, label]),
+);

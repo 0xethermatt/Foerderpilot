@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
-  FileText,
   Bot,
   ArrowRight,
   MapPin,
@@ -14,6 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
 import StatusRiskEditor from './StatusRiskEditor';
 import TasksSection from './TasksSection';
+import DocumentsSection from './DocumentsSection';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
@@ -27,6 +27,7 @@ import {
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
 type TaskRow = Database['public']['Tables']['tasks']['Row'];
+type DocumentRow = Database['public']['Tables']['documents']['Row'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,33 @@ export default async function CaseDetailPage({
     .order('completed', { ascending: true })
     .order('due_date', { ascending: true, nullsFirst: false })
     .returns<TaskRow[]>();
+
+  const { data: documentsRaw } = await supabase
+    .from('documents')
+    .select()
+    .eq('funding_case_id', fundingCase.id)
+    .order('uploaded_at', { ascending: false })
+    .returns<DocumentRow[]>();
+
+  const documents = documentsRaw ?? [];
+
+  // Generate signed URLs server-side for all documents (1-hour expiry)
+  const signedUrls: Record<string, string> = {};
+  if (documents.length > 0) {
+    const { data: urlData } = await supabase.storage
+      .from('case-documents')
+      .createSignedUrls(
+        documents.map((d) => d.storage_path),
+        3600,
+      );
+    if (urlData) {
+      for (const item of urlData) {
+        if (item.path && item.signedUrl) {
+          signedUrls[item.path] = item.signedUrl;
+        }
+      }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -305,10 +333,10 @@ export default async function CaseDetailPage({
             hint="Wird in Phase 4 ergänzt."
           />
           <TasksSection caseId={fundingCase.id} initialTasks={tasks ?? []} />
-          <PlaceholderCard
-            title="Dokumente"
-            icon={FileText}
-            hint="Wird in Phase 5 ergänzt."
+          <DocumentsSection
+            caseId={fundingCase.id}
+            initialDocuments={documents}
+            signedUrls={signedUrls}
           />
           <PlaceholderCard
             title="KI-Prüfungen"

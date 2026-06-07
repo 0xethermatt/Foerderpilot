@@ -42,13 +42,23 @@ export type DbCurrentHeatingType = 'gas' | 'oil' | 'electric' | 'district_heat' 
 export type DbPlannedHeatingType = 'air_water' | 'brine_water' | 'water_water'
 
 export type DbDocumentType =
-  | 'energy_certificate'
-  | 'building_permit'
   | 'offer'
   | 'contract'
-  | 'proof_of_completion'
-  | 'bank_statement'
+  | 'old_heating_photo'
+  | 'old_heating_nameplate'
+  | 'owner_proof'
+  | 'bza'
+  | 'kfw_approval'
+  | 'invoice'
+  | 'bnd'
   | 'other'
+
+export type DbDocumentStatus =
+  | 'uploaded'
+  | 'needs_review'
+  | 'reviewed'
+  | 'missing'
+  | 'rejected'
 
 export type DbAICheckType =
   | 'eligibility_check'
@@ -216,9 +226,13 @@ export interface Database {
           type: DbDocumentType
           storage_path: string
           file_size_bytes: number | null
+          mime_type: string | null
+          status: DbDocumentStatus
+          notes: string | null
           uploaded_by: string
           uploaded_at: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -227,9 +241,13 @@ export interface Database {
           type: DbDocumentType
           storage_path: string
           file_size_bytes?: number | null
+          mime_type?: string | null
+          status?: DbDocumentStatus
+          notes?: string | null
           uploaded_by: string
           uploaded_at?: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -238,9 +256,13 @@ export interface Database {
           type?: DbDocumentType
           storage_path?: string
           file_size_bytes?: number | null
+          mime_type?: string | null
+          status?: DbDocumentStatus
+          notes?: string | null
           uploaded_by?: string
           uploaded_at?: string
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
