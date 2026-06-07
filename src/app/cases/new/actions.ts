@@ -7,7 +7,7 @@ import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
 
 // Dev fallback — matches the UUID in supabase/seed.sql
 const DEV_COMPANY_ID =
-  process.env.DEFAULT_COMPANY_ID ?? '00000000-0000-0000-0000-000000000001';
+  (process.env.DEFAULT_COMPANY_ID ?? '00000000-0000-0000-0000-000000000001').trim();
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
