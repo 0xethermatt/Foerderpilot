@@ -14,6 +14,8 @@ import RiskBadge from '@/components/ui/RiskBadge';
 import StatusRiskEditor from './StatusRiskEditor';
 import TasksSection from './TasksSection';
 import DocumentsSection from './DocumentsSection';
+import FundingChecklistSection from './FundingChecklistSection';
+import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
@@ -167,6 +169,10 @@ export default async function CaseDetailPage({
     .returns<DocumentRow[]>();
 
   const documents = documentsRaw ?? [];
+
+  // Compute checklist and readiness from uploaded documents
+  const checklistItems = computeChecklist(documents);
+  const readiness = computeReadiness(checklistItems);
 
   // Generate signed URLs server-side for all documents (1-hour expiry)
   const signedUrls: Record<string, string> = {};
@@ -333,6 +339,11 @@ export default async function CaseDetailPage({
             hint="Wird in Phase 4 ergänzt."
           />
           <TasksSection caseId={fundingCase.id} initialTasks={tasks ?? []} />
+          <FundingChecklistSection
+            caseId={fundingCase.id}
+            items={checklistItems}
+            readiness={readiness}
+          />
           <DocumentsSection
             caseId={fundingCase.id}
             initialDocuments={documents}
