@@ -2,15 +2,37 @@ import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, ClipboardList, Folder, Plus } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
-import { mockFundingCases, mockTasks } from '@/lib/mock/data';
-import type { FundingCase } from '@/lib/types';
+import { createServiceClient } from '@/lib/supabase/service-client';
+import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import type { Database } from '@/lib/supabase/database.types';
+import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 
-// ─── Derived stats ─────────────────────────────────────────────────────────────
+type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
+type CustomerRow = Database['public']['Tables']['customers']['Row'];
 
-const activeCases = mockFundingCases.filter((c) => c.status !== 'completed');
-const criticalCases = mockFundingCases.filter((c) => c.risk_level === 'red');
-const openTasks = mockTasks.filter((t) => !t.completed);
-const completedCases = mockFundingCases.filter((c) => c.status === 'completed');
+interface DashboardCase extends FundingCaseRow {
+  customer: Pick<CustomerRow, 'first_name' | 'last_name'> | null;
+  open_task_count: number;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function formatCurrency(amount?: number | null) {
+  if (amount == null) return '–';
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 
@@ -40,23 +62,19 @@ function StatCard({
 
 // ─── Cases table ───────────────────────────────────────────────────────────────
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-function formatCurrency(amount?: number) {
-  if (amount == null) return '–';
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
-}
-
-function CasesTable({ cases }: { cases: FundingCase[] }) {
+function CasesTable({ cases }: { cases: DashboardCase[] }) {
   if (cases.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-gray-400">Keine Fälle vorhanden.</p>
+      <div className="py-12 text-center">
+        <p className="text-sm text-gray-400">Noch keine Fälle vorhanden.</p>
+        <Link
+          href="/cases/new"
+          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
+        >
+          <Plus className="h-4 w-4" />
+          Ersten Förderfall anlegen
+        </Link>
+      </div>
     );
   }
 
@@ -65,7 +83,7 @@ function CasesTable({ cases }: { cases: FundingCase[] }) {
       <table className="min-w-full divide-y divide-gray-100">
         <thead>
           <tr>
-            {['Kunde', 'Titel', 'Status', 'Risiko', 'Förderung', 'Off. Aufgaben', 'Zuletzt geändert'].map(
+            {['Kunde', 'Titel', 'Status', 'Risiko', 'Geschätzte Kosten', 'Off. Aufgaben', 'Zuletzt geändert'].map(
               (h) => (
                 <th
                   key={h}
@@ -81,22 +99,29 @@ function CasesTable({ cases }: { cases: FundingCase[] }) {
           {cases.map((c) => (
             <tr key={c.id} className="hover:bg-gray-50 transition-colors">
               <td className="py-3 px-4 first:pl-0 text-sm font-medium text-gray-900 whitespace-nowrap">
-                {c.customer ? `${c.customer.last_name}, ${c.customer.first_name}` : '–'}
+                {c.customer
+                  ? `${c.customer.last_name}, ${c.customer.first_name}`
+                  : '–'}
               </td>
               <td className="py-3 px-4 text-sm text-gray-700 max-w-[200px] truncate">
-                {c.title}
+                <Link
+                  href={`/cases/${c.id}`}
+                  className="hover:text-gray-900 hover:underline"
+                >
+                  {c.title}
+                </Link>
               </td>
               <td className="py-3 px-4">
-                <StatusBadge status={c.status} />
+                <StatusBadge status={c.status as FundingCaseStatus} />
               </td>
               <td className="py-3 px-4">
-                <RiskBadge risk={c.risk_level} />
+                <RiskBadge risk={c.risk_level as RiskLevel} />
               </td>
               <td className="py-3 px-4 text-sm text-gray-700 whitespace-nowrap">
-                {formatCurrency(c.funding_amount)}
+                {formatCurrency(c.estimated_cost)}
               </td>
               <td className="py-3 px-4 text-sm text-center">
-                {(c.open_task_count ?? 0) > 0 ? (
+                {c.open_task_count > 0 ? (
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">
                     {c.open_task_count}
                   </span>
@@ -115,53 +140,72 @@ function CasesTable({ cases }: { cases: FundingCase[] }) {
   );
 }
 
-// ─── Upcoming tasks ────────────────────────────────────────────────────────────
-
-function UpcomingTasks() {
-  const sorted = [...openTasks]
-    .filter((t) => t.due_date)
-    .sort((a, b) => (a.due_date! > b.due_date! ? 1 : -1))
-    .slice(0, 5);
-
-  const caseById = Object.fromEntries(mockFundingCases.map((c) => [c.id, c]));
-
-  return (
-    <ul className="divide-y divide-gray-50">
-      {sorted.map((t) => {
-        const fundingCase = caseById[t.funding_case_id];
-        const overdue = t.due_date! < new Date().toISOString().slice(0, 10);
-        return (
-          <li key={t.id} className="py-3 flex items-start gap-3">
-            <span
-              className={`mt-0.5 flex-shrink-0 h-2 w-2 rounded-full ${overdue ? 'bg-red-500' : 'bg-amber-400'}`}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {fundingCase
-                  ? `${fundingCase.customer?.last_name ?? '–'} · ${fundingCase.title}`
-                  : '–'}
-                {t.due_date && (
-                  <>
-                    {' · '}
-                    <span className={overdue ? 'text-red-600 font-medium' : ''}>
-                      fällig {formatDate(t.due_date)}
-                    </span>
-                  </>
-                )}
-              </p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default function DashboardPage() {
-  const activeNonCompleted = mockFundingCases.filter((c) => c.status !== 'completed');
+export default async function DashboardPage() {
+  // ── Fallback when Supabase is not configured ─────────────────────────────
+  if (!isServiceRoleConfigured()) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-semibold text-gray-900">Übersicht</h1>
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-4">
+          <p className="text-sm font-medium text-yellow-800">Supabase nicht konfiguriert</p>
+          <p className="text-sm text-yellow-700 mt-1">
+            Bitte{' '}
+            <code className="font-mono bg-yellow-100 rounded px-1">.env.local</code>{' '}
+            mit den Supabase-Zugangsdaten befüllen.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Load data ────────────────────────────────────────────────────────────
+  const supabase = createServiceClient();
+
+  const [casesResult, taskCountResult] = await Promise.all([
+    supabase
+      .from('funding_cases')
+      .select()
+      .order('updated_at', { ascending: false }),
+    supabase
+      .from('tasks')
+      .select('funding_case_id')
+      .eq('completed', false),
+  ]);
+
+  const allCases = casesResult.data ?? [];
+
+  // Load customers for the cases we have
+  let customers: Pick<CustomerRow, 'id' | 'first_name' | 'last_name'>[] = [];
+  if (allCases.length > 0) {
+    const customerIds = Array.from(new Set(allCases.map((c) => c.customer_id)));
+    const { data } = await supabase
+      .from('customers')
+      .select('id, first_name, last_name')
+      .in('id', customerIds);
+    customers = data ?? [];
+  }
+
+  // Build lookup maps
+  const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
+  const taskCountMap: Record<string, number> = {};
+  for (const t of taskCountResult.data ?? []) {
+    taskCountMap[t.funding_case_id] = (taskCountMap[t.funding_case_id] ?? 0) + 1;
+  }
+
+  // Enrich cases
+  const enrichedCases: DashboardCase[] = allCases.map((c) => ({
+    ...c,
+    customer: customerMap[c.customer_id] ?? null,
+    open_task_count: taskCountMap[c.id] ?? 0,
+  }));
+
+  // ── Derived stats ────────────────────────────────────────────────────────
+  const activeCases = enrichedCases.filter((c) => c.status !== 'completed');
+  const criticalCases = enrichedCases.filter((c) => c.risk_level === 'red');
+  const totalOpenTasks = Object.values(taskCountMap).reduce((s, n) => s + n, 0);
+  const completedCases = enrichedCases.filter((c) => c.status === 'completed');
 
   return (
     <div className="space-y-8">
@@ -198,7 +242,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Offene Aufgaben"
-          value={openTasks.length}
+          value={totalOpenTasks}
           icon={ClipboardList}
           accent="bg-amber-50 text-amber-600"
         />
@@ -210,25 +254,13 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Main content: table + task sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cases table */}
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold text-gray-900">Aktive Fälle</h2>
-            <span className="text-xs text-gray-400">{activeNonCompleted.length} gesamt</span>
-          </div>
-          <CasesTable cases={activeNonCompleted} />
+      {/* Cases table */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-sm font-semibold text-gray-900">Aktive Fälle</h2>
+          <span className="text-xs text-gray-400">{activeCases.length} gesamt</span>
         </div>
-
-        {/* Sidebar: upcoming tasks */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold text-gray-900">Nächste Aufgaben</h2>
-            <span className="text-xs text-gray-400">{openTasks.length} offen</span>
-          </div>
-          <UpcomingTasks />
-        </div>
+        <CasesTable cases={activeCases} />
       </div>
 
       {/* Disclaimer */}

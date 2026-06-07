@@ -318,6 +318,37 @@ export interface Database {
         }
         Relationships: []
       }
+
+      audit_log: {
+        Row: {
+          id: string
+          funding_case_id: string
+          field: string
+          old_value: string | null
+          new_value: string | null
+          changed_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          funding_case_id: string
+          field: string
+          old_value?: string | null
+          new_value?: string | null
+          changed_by?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          funding_case_id?: string
+          field?: string
+          old_value?: string | null
+          new_value?: string | null
+          changed_by?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

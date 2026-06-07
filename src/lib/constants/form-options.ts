@@ -43,3 +43,25 @@ export const CURRENT_HEATING_TYPE_LABELS: Record<string, string> = Object.fromEn
 export const PLANNED_HEATING_TYPE_LABELS: Record<string, string> = Object.fromEntries(
   PLANNED_HEATING_TYPE_OPTIONS.map(({ value, label }) => [value, label]),
 );
+
+export const STATUS_OPTIONS = [
+  { value: 'lead_received',           label: 'Lead erhalten' },
+  { value: 'data_missing',            label: 'Daten fehlen' },
+  { value: 'funding_check_done',      label: 'Förderprüfung erledigt' },
+  { value: 'offer_created',           label: 'Angebot erstellt' },
+  { value: 'contract_review_needed',  label: 'Vertragsprüfung nötig' },
+  { value: 'contract_signed',         label: 'Vertrag unterzeichnet' },
+  { value: 'bza_prepared',            label: 'BZA vorbereitet' },
+  { value: 'application_submitted',   label: 'Antrag gestellt' },
+  { value: 'approval_received',       label: 'Genehmigung erhalten' },
+  { value: 'execution_released',      label: 'Ausführung freigegeben' },
+  { value: 'proof_documents_pending', label: 'Nachweise ausstehend' },
+  { value: 'proof_submitted',         label: 'Nachweise eingereicht' },
+  { value: 'completed',               label: 'Abgeschlossen' },
+] as const;
+
+export const RISK_LEVEL_OPTIONS = [
+  { value: 'green',  label: 'Grün' },
+  { value: 'yellow', label: 'Gelb' },
+  { value: 'red',    label: 'Rot' },
+] as const;

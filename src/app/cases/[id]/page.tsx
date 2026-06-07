@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
+import StatusRiskEditor from './StatusRiskEditor';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 import {
   BUILDING_TYPE_LABELS,
   OWNER_STATUS_LABELS,
@@ -275,19 +277,18 @@ export default async function CaseDetailPage({
 
         {/* Right column */}
         <div className="space-y-4">
-          {/* Status card */}
+          {/* Status & risk editor */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Status & Risiko</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Aktueller Status</p>
-                <StatusBadge status={fundingCase.status} />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Risikoeinschätzung</p>
-                <RiskBadge risk={fundingCase.risk_level} />
-              </div>
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">Status & Risiko</h2>
+            <div className="flex gap-2 mb-4">
+              <StatusBadge status={fundingCase.status as FundingCaseStatus} />
+              <RiskBadge risk={fundingCase.risk_level as RiskLevel} />
             </div>
+            <StatusRiskEditor
+              caseId={fundingCase.id}
+              currentStatus={fundingCase.status as FundingCaseStatus}
+              currentRisk={fundingCase.risk_level as RiskLevel}
+            />
           </div>
 
           <PlaceholderCard
