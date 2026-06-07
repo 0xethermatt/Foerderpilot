@@ -3,7 +3,6 @@ import Link from 'next/link';
 import {
   ChevronLeft,
   FileText,
-  ListChecks,
   Bot,
   ArrowRight,
   MapPin,
@@ -14,6 +13,8 @@ import {
 import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
 import StatusRiskEditor from './StatusRiskEditor';
+import TasksSection from './TasksSection';
+import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
 import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
@@ -23,10 +24,9 @@ import {
   CURRENT_HEATING_TYPE_LABELS,
   PLANNED_HEATING_TYPE_LABELS,
 } from '@/lib/constants/form-options';
-import type { Database } from '@/lib/supabase/database.types';
-
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
+type TaskRow = Database['public']['Tables']['tasks']['Row'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -149,6 +149,14 @@ export default async function CaseDetailPage({
     .select()
     .eq('id', fundingCase.customer_id)
     .single<CustomerRow>();
+
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select()
+    .eq('funding_case_id', fundingCase.id)
+    .order('completed', { ascending: true })
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .returns<TaskRow[]>();
 
   return (
     <div className="space-y-6">
@@ -296,11 +304,7 @@ export default async function CaseDetailPage({
             icon={ArrowRight}
             hint="Wird in Phase 4 ergänzt."
           />
-          <PlaceholderCard
-            title="Aufgaben"
-            icon={ListChecks}
-            hint="Wird in Phase 4 ergänzt."
-          />
+          <TasksSection caseId={fundingCase.id} initialTasks={tasks ?? []} />
           <PlaceholderCard
             title="Dokumente"
             icon={FileText}

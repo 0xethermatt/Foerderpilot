@@ -9,6 +9,7 @@ import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
+type TaskRow = Database['public']['Tables']['tasks']['Row'];
 
 interface DashboardCase extends FundingCaseRow {
   customer: Pick<CustomerRow, 'first_name' | 'last_name'> | null;
@@ -57,6 +58,61 @@ function StatCard({
         <p className="text-sm text-gray-500 mt-0.5">{label}</p>
       </div>
     </div>
+  );
+}
+
+// ─── Upcoming tasks sidebar ────────────────────────────────────────────────────
+
+const PRIORITY_DOT: Record<string, string> = {
+  high: 'bg-red-500',
+  normal: 'bg-yellow-400',
+  low: 'bg-gray-300',
+};
+
+function UpcomingTasks({
+  tasks,
+  caseMap,
+}: {
+  tasks: TaskRow[];
+  caseMap: Record<string, string>;
+}) {
+  if (tasks.length === 0) {
+    return <p className="text-xs text-gray-400">Keine offenen Aufgaben.</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {tasks.map((t) => {
+        const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
+        return (
+          <li key={t.id} className="flex items-start gap-2">
+            <span
+              className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[t.priority] ?? 'bg-gray-300'}`}
+            />
+            <div className="min-w-0">
+              <Link
+                href={`/cases/${t.funding_case_id}`}
+                className="text-sm text-gray-800 hover:underline line-clamp-1"
+              >
+                {t.title}
+              </Link>
+              {caseMap[t.funding_case_id] && (
+                <p className="text-xs text-gray-400 truncate">{caseMap[t.funding_case_id]}</p>
+              )}
+              {t.due_date && (
+                <p className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                  {overdue ? 'Überfällig · ' : ''}
+                  {new Date(t.due_date).toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })}
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -163,7 +219,7 @@ export default async function DashboardPage() {
   // ── Load data ────────────────────────────────────────────────────────────
   const supabase = createServiceClient();
 
-  const [casesResult, taskCountResult] = await Promise.all([
+  const [casesResult, taskCountResult, upcomingTasksResult] = await Promise.all([
     supabase
       .from('funding_cases')
       .select()
@@ -172,6 +228,13 @@ export default async function DashboardPage() {
       .from('tasks')
       .select('funding_case_id')
       .eq('completed', false),
+    supabase
+      .from('tasks')
+      .select()
+      .eq('completed', false)
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(20)
+      .returns<TaskRow[]>(),
   ]);
 
   const allCases = casesResult.data ?? [];
@@ -200,6 +263,10 @@ export default async function DashboardPage() {
     customer: customerMap[c.customer_id] ?? null,
     open_task_count: taskCountMap[c.id] ?? 0,
   }));
+
+  // Case title map for task sidebar
+  const caseTitleMap = Object.fromEntries(allCases.map((c) => [c.id, c.title]));
+  const upcomingTasks = upcomingTasksResult.data ?? [];
 
   // ── Derived stats ────────────────────────────────────────────────────────
   const activeCases = enrichedCases.filter((c) => c.status !== 'completed');
@@ -254,13 +321,27 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Cases table */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-semibold text-gray-900">Aktive Fälle</h2>
-          <span className="text-xs text-gray-400">{activeCases.length} gesamt</span>
+      {/* Main content: cases table + tasks sidebar */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        {/* Cases table */}
+        <div className="xl:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-sm font-semibold text-gray-900">Aktive Fälle</h2>
+            <span className="text-xs text-gray-400">{activeCases.length} gesamt</span>
+          </div>
+          <CasesTable cases={activeCases} />
         </div>
-        <CasesTable cases={activeCases} />
+
+        {/* Upcoming tasks sidebar */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-sm font-semibold text-gray-900">Offene Aufgaben</h2>
+            {upcomingTasks.length > 0 && (
+              <span className="text-xs text-gray-400">{upcomingTasks.length} gesamt</span>
+            )}
+          </div>
+          <UpcomingTasks tasks={upcomingTasks} caseMap={caseTitleMap} />
+        </div>
       </div>
 
       {/* Disclaimer */}

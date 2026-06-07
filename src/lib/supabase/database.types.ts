@@ -253,6 +253,7 @@ export interface Database {
           description: string | null
           assigned_to: string | null
           due_date: string | null
+          priority: 'low' | 'normal' | 'high'
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -265,6 +266,7 @@ export interface Database {
           description?: string | null
           assigned_to?: string | null
           due_date?: string | null
+          priority?: 'low' | 'normal' | 'high'
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -277,6 +279,7 @@ export interface Database {
           description?: string | null
           assigned_to?: string | null
           due_date?: string | null
+          priority?: 'low' | 'normal' | 'high'
           completed?: boolean
           completed_at?: string | null
           created_at?: string
