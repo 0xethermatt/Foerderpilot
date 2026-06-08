@@ -66,9 +66,10 @@ Schritt 2 – Liefer-/Leistungsvertrag mit Fördervorbehalt abschließen
     und den Förderanspruch gefährden.
 
 Schritt 3 – BzA ausstellen lassen
-  - BzA = "Bestätigung zum Antrag" (ausgestellt von einem zugelassenen Energieberater/Fachunternehmen).
+  - BzA = "Bestätigung zum Antrag" (ausgestellt von einem qualifizierten Fachunternehmen / SHK-Fachbetrieb oder einer berechtigten Stelle).
   - FALSCHE Definition, niemals verwenden: "Bestätigung zum Verwendungsnachweis Antrag".
   - Die BzA bestätigt die technische Eignung der geplanten Maßnahme.
+  - Hinweis: Qualifizierte SHK-Fachbetriebe können die BzA selbst erstellen, sofern sie die Voraussetzungen erfüllen. Nicht zwingend ein externer Energieberater.
 
 Schritt 4 – Antrag im KfW-Portal "Meine KfW" stellen
   - Antragstellung ausschließlich über das KfW-Portal "Meine KfW" (kfw.de).
@@ -87,14 +88,14 @@ Schritt 6 – Umsetzung nach Förderzusage
 
 Schritt 7 – Nachweise nach Fertigstellung einreichen
   - Rechnung des Fachbetriebs
-  - BND (Bestätigung nach Durchführung) vom Energieberater/Fachunternehmen
+  - BND (Bestätigung nach Durchführung) vom qualifizierten Fachunternehmen / SHK-Fachbetrieb oder berechtigter Stelle
   - Ggf. weitere Nachweisdokumente über das KfW-Portal einreichen
 
 ════════════════════════════════════════════════════════
 DEFINITIONEN (exakt verwenden)
 ════════════════════════════════════════════════════════
-- BzA  = Bestätigung zum Antrag (VOR Antragstellung, vom Energieberater)
-- BND  = Bestätigung nach Durchführung (NACH Fertigstellung, vom Energieberater)
+- BzA  = Bestätigung zum Antrag (VOR Antragstellung, vom qualifizierten Fachunternehmen / SHK-Fachbetrieb oder berechtigter Stelle)
+- BND  = Bestätigung nach Durchführung (NACH Fertigstellung, vom qualifizierten Fachunternehmen / SHK-Fachbetrieb oder berechtigter Stelle)
 - Fördervorbehalt = aufschiebende oder auflösende Bedingung im Vertrag, geknüpft an KfW-Zusage
 - Vorhabenbeginn = Bestellung ohne Fördervorbehalt, Baubeginn, oder Installationsbeginn
 
@@ -159,7 +160,7 @@ blocking_items: Liste aller Punkte, die eine Antragstellung aktuell verhindern.
 
 recommended_next_steps: Konkreter nächster Schritt gemäß KfW-458-Prozess, z.B.:
   - "Liefer-/Leistungsvertrag mit Fördervorbehalt (aufschiebende Bedingung) erstellen"
-  - "BzA (Bestätigung zum Antrag) vom Energieberater ausstellen lassen"
+  - "BzA (Bestätigung zum Antrag) durch qualifiziertes Fachunternehmen / SHK-Fachbetrieb erstellen lassen"
   - "Antrag im KfW-Portal 'Meine KfW' stellen"
   - "Umsetzung erst nach Förderzusage/Freigabe beginnen"
 
