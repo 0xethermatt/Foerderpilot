@@ -39,14 +39,34 @@ const VALID_STATUSES = new Set([
   'uploaded', 'needs_review', 'reviewed', 'missing', 'rejected',
 ]);
 
-// Task titles auto-completed when the matching document type is marked reviewed.
-// Only exact-title matches on open tasks are closed.
-const TASK_TITLES_BY_DOC_TYPE: Record<string, string[]> = {
-  offer:                 ['Angebot hochladen', 'Angebot prüfen'],
-  contract:              ['Liefer-/Leistungsvertrag hochladen', 'Liefer-/Leistungsvertrag anfordern', 'Liefer-/Leistungsvertrag prüfen'],
-  old_heating_photo:     ['Foto Altanlage anfordern', 'Foto Altanlage prüfen'],
-  old_heating_nameplate: ['Foto Typenschild Altanlage anfordern', 'Foto Typenschild Altanlage prüfen'],
-  owner_proof:           ['Eigentumsnachweis anfordern', 'Eigentümernachweis anfordern', 'Eigentumsnachweis prüfen'],
+// uploadTaskTitles: closed when the document is first uploaded (needs_review).
+// reviewTaskTitle:  created on upload (if missing); closed when document is reviewed.
+interface DocTaskSpec {
+  uploadTaskTitles: string[];
+  reviewTaskTitle?: string;
+}
+
+const DOC_TASK_SPEC: Record<string, DocTaskSpec> = {
+  offer: {
+    uploadTaskTitles: ['Angebot hochladen'],
+    reviewTaskTitle:  'Angebot prüfen',
+  },
+  contract: {
+    uploadTaskTitles: ['Liefer-/Leistungsvertrag hochladen', 'Liefer-/Leistungsvertrag anfordern'],
+    reviewTaskTitle:  'Liefer-/Leistungsvertrag prüfen',
+  },
+  old_heating_photo: {
+    uploadTaskTitles: ['Foto Altanlage anfordern'],
+    reviewTaskTitle:  'Foto Altanlage prüfen',
+  },
+  old_heating_nameplate: {
+    uploadTaskTitles: ['Foto Typenschild Altanlage anfordern'],
+    reviewTaskTitle:  'Foto Typenschild Altanlage prüfen',
+  },
+  owner_proof: {
+    uploadTaskTitles: ['Eigentumsnachweis anfordern', 'Eigentümernachweis anfordern'],
+    reviewTaskTitle:  'Eigentumsnachweis prüfen',
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,7 +170,55 @@ export async function uploadCaseDocumentAction(
 
   await logAudit(case_id, 'document_uploaded', `${document_type}: ${file.name}`);
 
+  // ── Task transition on upload ──────────────────────────────────────────────
+  // Close upload/anfordern tasks; create review task if none exists yet.
+  const spec = DOC_TASK_SPEC[document_type];
+  if (spec) {
+    const now = new Date().toISOString();
+
+    if (spec.uploadTaskTitles.length > 0) {
+      const { data: openUploadTasks } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('funding_case_id', case_id)
+        .eq('completed', false)
+        .in('title', spec.uploadTaskTitles);
+
+      if (openUploadTasks && openUploadTasks.length > 0) {
+        await supabase
+          .from('tasks')
+          .update({ completed: true, completed_at: now })
+          .in('id', openUploadTasks.map((t) => t.id));
+      }
+    }
+
+    if (spec.reviewTaskTitle) {
+      const { data: existing } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('funding_case_id', case_id)
+        .eq('completed', false)
+        .eq('title', spec.reviewTaskTitle)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabase.from('tasks').insert({
+          funding_case_id: case_id,
+          title: spec.reviewTaskTitle,
+          priority: 'normal',
+        });
+      }
+    }
+
+    await logAudit(
+      case_id,
+      'task_auto_transitioned_document_uploaded',
+      `doc_type=${document_type}`,
+    );
+  }
+
   revalidatePath(`/cases/${case_id}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -193,15 +261,18 @@ export async function updateDocumentStatusAction(
   let tasksCompleted = 0;
 
   if (status === 'reviewed') {
-    const matchingTitles = TASK_TITLES_BY_DOC_TYPE[docRow.type] ?? [];
+    const spec = DOC_TASK_SPEC[docRow.type];
+    const allTitles = spec
+      ? [...spec.uploadTaskTitles, ...(spec.reviewTaskTitle ? [spec.reviewTaskTitle] : [])]
+      : [];
 
-    if (matchingTitles.length > 0) {
+    if (allTitles.length > 0) {
       const { data: openTasks } = await supabase
         .from('tasks')
         .select('id')
         .eq('funding_case_id', case_id)
         .eq('completed', false)
-        .in('title', matchingTitles);
+        .in('title', allTitles);
 
       if (openTasks && openTasks.length > 0) {
         const now = new Date().toISOString();
