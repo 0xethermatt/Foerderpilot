@@ -233,7 +233,7 @@ async function doc01() {
     kvRow(doc, 'Neue Anlage', 'Viessmann Vitocal 250-A AWO-E-AC 251.A10 (Luft-Wasser-WP, monovalent)');
     kvRow(doc, 'Heizleistung', 'ca. 10 kW bei A-7/W35 (EN14511)');
     kvRow(doc, 'Anlagentyp', 'Monoblock-Außengerät mit Inneneinheit');
-    kvRow(doc, 'Förderprogramm', 'Bundesförderung für effiziente Gebäude (BEG), BAFA/KfW');
+    kvRow(doc, 'Förderprogramm', 'KfW-Heizungsförderung (BEG EZ, KfW-Programm 458) – Antragstellung ausschließlich über Meine KfW (kfw.de)');
     doc.moveDown(0.3);
     doc.fontSize(9).fillColor(GRAY)
        .text('Angebotsnummer: 2024-0471  |  Datum: 03.09.2024  |  Gültig bis: 03.12.2024', { align: 'left' });
@@ -298,15 +298,16 @@ async function doc01() {
 
     sectionHead(doc, 'Hinweise zu Fördervoraussetzungen');
     doc.fontSize(9).text(
-      'Dieser Auftrag steht unter dem Vorbehalt der Förderzusage durch das BAFA/KfW im Rahmen der ' +
-      'Bundesförderung für effiziente Gebäude (BEG EZ). Die Ausführung darf erst nach Erhalt der ' +
-      'Förderzusage und schriftlicher Freigabe durch den Auftraggeber beginnen.\n\n' +
-      'Voraussetzungen gemäß BEG-Richtlinie:\n' +
+      'Dieser Auftrag steht unter dem Vorbehalt der KfW-Förderzusage im Rahmen der ' +
+      'KfW-Heizungsförderung (BEG EZ, KfW-Programm 458). Die Ausführung darf erst nach Erhalt der ' +
+      'KfW-Förderzusage und schriftlicher Freigabe durch den Auftraggeber beginnen.\n\n' +
+      'Voraussetzungen gemäß KfW-Heizungsförderung:\n' +
       '• COP ≥ 3,0 (EN 14511, A-7/W35 oder A2/W35)\n' +
       '• JAZ ≥ 3,0 für die Heizungsanlage\n' +
       '• Nachweis hydraulischer Abgleich nach Verfahren B\n' +
+      '• BzA (Bestätigung zum Antrag) durch zugelassenen Energieberater vor Antragstellung\n' +
       '• Fachunternehmerbestätigung durch ausführenden SHK-Betrieb\n' +
-      '• Energieberaterbescheinigung (Anlage 5 BEG) vom Energieberater des Auftraggebers'
+      '• Antragstellung ausschließlich im KfW-Portal „Meine KfW" (kfw.de)'
     ).moveDown(0.5);
 
     sectionHead(doc, 'Ausführungszeitraum');
@@ -314,7 +315,7 @@ async function doc01() {
       'Geplanter Beginn:  15. Januar 2025\n' +
       'Geplantes Ende:    28. Februar 2025\n\n' +
       'Bindefrist dieses Angebots: 03. Dezember 2024\n' +
-      'Wichtig: Die Maßnahme darf erst nach Eingang der BAFA-/KfW-Förderzusage begonnen werden.'
+      'Wichtig: Die Maßnahme darf erst nach Eingang der KfW-Förderzusage begonnen werden.'
     ).moveDown(0.5);
 
     sectionHead(doc, 'Gewährleistung');
@@ -381,7 +382,7 @@ async function doc02() {
     doc.fontSize(9).fillColor(RED).font('Helvetica-Bold')
        .text('Erkannte Mängel (Testdokumentation):', { underline: true }).font('Helvetica');
     doc.fontSize(9).fillColor(RED).text(
-      '1. Kein exaktes Wärmepumpenmodell – BAFA/KfW-Förderfähigkeit nicht prüfbar\n' +
+      '1. Kein exaktes Wärmepumpenmodell – KfW-Förderfähigkeit (Programm 458) nicht prüfbar\n' +
       '2. Hydraulischer Abgleich Verfahren B fehlt – BEG-Pflichtnachweis!\n' +
       '3. Pauschalpreise ohne Einzelpositionen – Förderfähigkeit nicht belegbar\n' +
       '4. Kein geplanter Ausführungszeitraum – Planung der Antragstellung unklar\n' +
@@ -398,7 +399,7 @@ async function doc02() {
 // ─────────────────────────────────────────────────────────────
 async function doc03() {
   await createPDF('03_vertrag_mit_foerdervorbehalt.pdf', (doc) => {
-    addRedBar(doc, 'Lieferungs- und Leistungsvertrag', 'Nr. V-2024-0471 · mit Fördervorbehalt (KfW/BAFA)');
+    addRedBar(doc, 'Lieferungs- und Leistungsvertrag', 'Nr. V-2024-0471 · mit Fördervorbehalt (KfW-Heizungsförderung, KfW 458)');
 
     sectionHead(doc, 'Vertragsparteien');
     kvRow(doc, 'Auftragnehmer (AN)', 'Haustechnik Frey Muster GmbH, Musterstraße 42, 12345 Musterstadt');
@@ -435,36 +436,37 @@ async function doc03() {
     addTestBanner(doc);
     doc.moveDown(0.5);
 
-    sectionHead(doc, '§ 4  Aufschiebende Bedingung – Förderung (WESENTLICHE VERTRAGSKLAUSEL)');
+    sectionHead(doc, '§ 4  Fördervorbehalt / Bedingte Wirksamkeit (WESENTLICHE VERTRAGSKLAUSEL)');
     doc.rect(50, doc.y, 495, 3).fill(GREEN).moveDown(0.3);
     doc.fontSize(9).fillColor(GREEN).font('Helvetica-Bold')
-       .text('§ 4.1  Aufschiebende Bedingung').font('Helvetica').fillColor(DARK);
+       .text('§ 4.1  Aufschiebende Bedingung – KfW-Förderzusage').font('Helvetica').fillColor(DARK);
     doc.fontSize(9).text(
       'Dieser Vertrag steht unter der aufschiebenden Bedingung (§ 158 Abs. 1 BGB), dass dem ' +
-      'Auftraggeber eine Förderzusage im Rahmen der Bundesförderung für effiziente Gebäude ' +
-      '(BEG EZ – Einzelmaßnahmen) durch die KfW Bank / das BAFA in einer Mindesthöhe von ' +
-      '30 % der förderfähigen Netto-Investitionskosten erteilt wird.\n\n' +
-      'Dieser Vertrag wird erst wirksam, wenn die Förderzusage dem Auftragnehmer in Kopie ' +
-      'vorgelegt wird. Bis zu diesem Zeitpunkt besteht keine Verpflichtung zur Leistungserbringung ' +
-      'durch den Auftragnehmer und keine Zahlungspflicht des Auftraggebers.'
+      'Auftraggeber eine Förderzusage durch die KfW im Rahmen der KfW-Heizungsförderung ' +
+      '(BEG EZ, Programm 458) erteilt wird.\n\n' +
+      'Dieser Vertrag wird vor der Antragstellung bei KfW abgeschlossen und als Anlage zum ' +
+      'KfW-Antrag im Portal „Meine KfW" (kfw.de) hochgeladen. Die Unterzeichnung dieses Vertrags ' +
+      'begründet keinen Ausführungsbeginn. Die Leistungen werden erst ausgeführt, wenn die ' +
+      'KfW-Förderzusage vorliegt und der Auftraggeber die schriftliche Ausführungsfreigabe erteilt hat.'
     ).moveDown(0.5);
 
     doc.fontSize(9).fillColor(GREEN).font('Helvetica-Bold')
-       .text('§ 4.2  Ausführungsverbot vor Förderzusage').font('Helvetica').fillColor(DARK);
+       .text('§ 4.2  Ausführungsverbot vor KfW-Förderzusage').font('Helvetica').fillColor(DARK);
     doc.fontSize(9).text(
-      'Die Ausführung der Leistungen darf NICHT vor Erhalt der Förderzusage und ausdrücklicher ' +
+      'Die Ausführung der Leistungen darf NICHT vor Erhalt der KfW-Förderzusage und ausdrücklicher ' +
       'schriftlicher Freigabe durch den Auftraggeber beginnen.\n\n' +
-      'Ein vorzeitiger Maßnahmenbeginn vor Bewilligung des Förderantrags führt gemäß BEG-Richtlinie ' +
-      'zum vollständigen Verlust des Förderanspruchs. Diese Regelung dient dem Schutz des ' +
-      'Auftraggebers und ist Bestandteil der BEG-Fördervoraussetzungen.'
+      'Ein vorzeitiger Maßnahmenbeginn vor Eingang der KfW-Förderzusage führt gemäß KfW-Richtlinie ' +
+      '(BEG EZ, Programm 458) zum vollständigen Verlust des KfW-Förderanspruchs. Als vorzeitiger ' +
+      'Beginn gilt jede Beauftragung oder Ausführungshandlung vor Eingang der Förderzusage.'
     ).moveDown(0.5);
 
     doc.fontSize(9).fillColor(GREEN).font('Helvetica-Bold')
-       .text('§ 4.3  Rücktrittsrecht bei Nichtgewährung').font('Helvetica').fillColor(DARK);
+       .text('§ 4.3  Auflösende Bedingung bei Nichtgewährung').font('Helvetica').fillColor(DARK);
     doc.fontSize(9).text(
-      'Erhält der Auftraggeber innerhalb von sechs (6) Monaten ab Vertragsdatum keine Förderzusage, ' +
-      'ist er berechtigt, kostenfrei vom Vertrag zurückzutreten (auflösende Bedingung, § 158 Abs. 2 BGB). ' +
-      'Der Auftragnehmer hat in diesem Fall keinen Anspruch auf Schadensersatz oder entgangenen Gewinn.'
+      'Wird die KfW-Förderzusage innerhalb von sechs (6) Monaten ab Vertragsdatum nicht erteilt, ' +
+      'tritt dieser Vertrag unter der auflösenden Bedingung (§ 158 Abs. 2 BGB) außer Kraft. ' +
+      'Der Auftraggeber kann kostenfrei zurücktreten. Der Auftragnehmer hat in diesem Fall keinen ' +
+      'Anspruch auf Schadensersatz oder entgangenen Gewinn.'
     ).moveDown(0.5);
 
     sectionHead(doc, '§ 5  Sonstige Bestimmungen');
@@ -483,7 +485,7 @@ async function doc03() {
     doc.moveDown(1);
     doc.rect(50, doc.y, 495, 2).fill(GREEN).moveDown(0.3);
     doc.fontSize(8).fillColor(GREEN).font('Helvetica-Bold')
-       .text('✓  Dieser Vertrag enthält einen ordnungsgemäßen Fördervorbehalt gemäß BEG-Richtlinie.')
+       .text('✓  Dieser Vertrag enthält einen ordnungsgemäßen Fördervorbehalt (aufschiebende/auflösende Bedingung) gemäß KfW-Heizungsförderung (KfW 458).')
        .font('Helvetica').fillColor(DARK);
 
     addPageFooter(doc, '2 / 2');
