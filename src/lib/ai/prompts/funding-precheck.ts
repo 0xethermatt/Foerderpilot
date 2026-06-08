@@ -151,17 +151,23 @@ confidence:
 - "medium" : 1–3 wichtige Felder fehlen oder Risiken erkannt
 - "high"   : Alle wichtigen Felder vorhanden, konsistente Datenlage
 
-blocking_items: Liste aller Punkte, die eine Antragstellung aktuell verhindern.
+blocking_items: Liste ALLER Punkte, die eine Antragstellung aktuell verhindern.
+  WICHTIG: Jede fehlende Vor-Antrag-Pflichtunterlage als SEPARATEN Eintrag aufführen – nicht zusammenfassen.
+  Wenn fünf Dokumente fehlen, müssen fünf Einträge in der Liste stehen.
   Verwende präzise Formulierungen, z.B.:
+  - "Angebot des Fachbetriebs fehlt"
   - "Liefer-/Leistungsvertrag mit Fördervorbehalt fehlt"
   - "BzA (Bestätigung zum Antrag) fehlt"
-  - "Angebot des Fachbetriebs fehlt"
+  - "Altanlagenfotos fehlen"
+  - "Typenschild der Altanlage fehlt"
+  - "Eigentumsnachweis fehlt"
 
-recommended_next_steps: Konkreter nächster Schritt gemäß KfW-458-Prozess, z.B.:
-  - "Liefer-/Leistungsvertrag mit Fördervorbehalt (aufschiebende Bedingung) erstellen"
-  - "BzA (Bestätigung zum Antrag) vom Energieberater ausstellen lassen"
-  - "Antrag im KfW-Portal 'Meine KfW' stellen"
-  - "Umsetzung erst nach Förderzusage/Freigabe beginnen"
+recommended_next_steps:
+  - Falls mehrere Pflichtunterlagen fehlen: Ersten Schritt formulieren, der ALLE fehlenden Unterlagen nennt,
+    z.B. "Alle fehlenden Pflichtunterlagen beschaffen: Angebot, Vertrag mit Fördervorbehalt, BzA, Altanlagenfotos"
+  - Falls nur eine Unterlage fehlt oder kein Blocker: Konkreten nächsten Schritt gemäß KfW-458-Prozess nennen,
+    z.B. "Liefer-/Leistungsvertrag mit Fördervorbehalt (aufschiebende Bedingung) erstellen"
+  - Weitere Schritte gemäß Prozessreihenfolge ergänzen
 
 customer_message_draft_de:
   Freundlicher Entwurf ohne Förderversprechen, ohne "garantiert", ohne BAFA-Erwähnung.`;

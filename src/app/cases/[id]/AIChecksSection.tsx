@@ -117,6 +117,45 @@ function ReviewButtons({ checkId, caseId }: { checkId: string; caseId: string })
   );
 }
 
+// ─── Compact summary derivation ───────────────────────────────────────────────
+// When multiple blocking before-application documents are missing, aggregate
+// them into a single readable sentence rather than showing only the first item.
+
+function stripMissingVerb(item: string): string {
+  return item
+    .replace(/\s+(fehlt|fehlen|liegt nicht vor|liegen nicht vor|nicht vorhanden)\.?$/i, '')
+    .trim();
+}
+
+function deriveCompactSummary(result: FundingPrecheckResult): {
+  hauptgrund: string | null;
+  naechsterSchritt: string | null;
+} {
+  const blocking = result.blocking_items ?? [];
+
+  if (blocking.length >= 2) {
+    const names = blocking.map(stripMissingVerb);
+    const last = names[names.length - 1];
+    const rest = names.slice(0, -1);
+    const listStr = rest.join(', ') + ' und ' + last;
+
+    return {
+      hauptgrund: `Mehrere Pflichtunterlagen vor Antragstellung fehlen: ${listStr}.`,
+      naechsterSchritt:
+        `Fehlende Unterlagen vollständig beschaffen: ${listStr} – erst danach ist die Antragstellung bei KfW möglich.`,
+    };
+  }
+
+  return {
+    hauptgrund:
+      blocking[0] ??
+      result.detected_risks?.[0]?.risk_de ??
+      result.missing_information?.[0] ??
+      null,
+    naechsterSchritt: result.recommended_next_steps?.[0] ?? null,
+  };
+}
+
 // ─── Entscheidung summary box ─────────────────────────────────────────────────
 
 function EntscheidungBox({
@@ -128,13 +167,7 @@ function EntscheidungBox({
   assessmentCfg: { label: string; cls: string } | null;
   riskCfg: { label: string; cls: string } | null;
 }) {
-  const hauptgrund =
-    result.blocking_items?.[0] ??
-    result.detected_risks?.[0]?.risk_de ??
-    result.missing_information?.[0] ??
-    null;
-
-  const naechsterSchritt = result.recommended_next_steps?.[0] ?? null;
+  const { hauptgrund, naechsterSchritt } = deriveCompactSummary(result);
 
   return (
     <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
