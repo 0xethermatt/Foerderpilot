@@ -290,9 +290,9 @@ export default async function CaseDetailPage({
           </div>
         </div>
 
-        {/* ── Right column: status/tasks side-by-side on xl, checklist + AI full-width ── */}
+        {/* ── Right column: status/tasks side-by-side on 2xl, checklist + AI full-width ── */}
         <div className="lg:col-span-5">
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-4 2xl:grid-cols-2">
             {/* Status & risk editor */}
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Status & Risiko</h2>
@@ -313,7 +313,7 @@ export default async function CaseDetailPage({
             </div>
 
             {/* Checklist – full width */}
-            <div className="xl:col-span-2">
+            <div className="2xl:col-span-2">
               <FundingChecklistSection
                 caseId={fundingCase.id}
                 items={checklistItems}
@@ -322,7 +322,7 @@ export default async function CaseDetailPage({
             </div>
 
             {/* AI checks – full width */}
-            <div className="xl:col-span-2" id="ai-checks">
+            <div className="2xl:col-span-2" id="ai-checks">
               <AIChecksSection
                 caseId={fundingCase.id}
                 initialChecks={aiChecks}

@@ -134,7 +134,7 @@ export default function CaseCommandHeader({
             className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <ClipboardList className="h-3.5 w-3.5" />
-            Aufgaben
+            {readiness.blocking_count > 0 ? 'Fehlende Aufgaben erstellen' : 'Aufgaben anzeigen'}
           </a>
           <a
             href="#documents"
@@ -148,7 +148,7 @@ export default function CaseCommandHeader({
             className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            KI-Fördercheck
+            KI-Fördercheck starten
           </a>
         </div>
       </div>
