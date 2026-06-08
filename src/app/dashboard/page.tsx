@@ -352,11 +352,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <p className="text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100 dark:border-gray-800 pt-4">
-        Förderpilot unterstützt die Vorbereitung von Förderanträgen. Kein automatischer Antrag –
-        alle KI-Prüfungen erfordern manuelle Freigabe. Es wird keine Garantie auf Fördererhalt gegeben.
-      </p>
     </div>
   );
 }

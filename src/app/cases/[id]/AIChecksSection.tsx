@@ -373,7 +373,11 @@ export default function AIChecksSection({
       <form action={formAction} className="mt-3">
         <input type="hidden" name="case_id" value={caseId} />
         {state?.error && (
-          <p className="text-xs text-red-600 dark:text-red-400 mb-1.5">{state.error}</p>
+          <p className="text-xs text-red-600 dark:text-red-400 mb-1.5">
+            {state.error.startsWith('KI-Prüfung fehlgeschlagen:')
+              ? 'KI-Prüfung konnte nicht ausgewertet werden. Bitte erneut versuchen.'
+              : state.error}
+          </p>
         )}
         <RunButton />
       </form>
