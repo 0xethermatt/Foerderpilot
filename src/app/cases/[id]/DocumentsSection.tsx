@@ -36,11 +36,11 @@ function formatDate(iso: string): string {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  uploaded:     'bg-blue-50 text-blue-700',
-  needs_review: 'bg-yellow-50 text-yellow-700',
-  reviewed:     'bg-green-50 text-green-700',
-  missing:      'bg-gray-100 text-gray-500',
-  rejected:     'bg-red-50 text-red-700',
+  uploaded:     'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  needs_review: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
+  reviewed:     'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300',
+  missing:      'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+  rejected:     'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
 // ─── Status update form ───────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ function StatusUpdateForm({
       <select
         name="status"
         defaultValue={currentStatus}
-        className="text-xs rounded border border-gray-200 px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+        className="text-xs rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
       >
         {DOCUMENT_STATUS_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -80,7 +80,7 @@ function StatusSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="text-xs rounded border border-gray-200 px-2 py-0.5 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+      className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
     >
       {pending ? '…' : 'Speichern'}
     </button>
@@ -108,19 +108,19 @@ function UploadForm({
   return (
     <form
       action={formAction}
-      className="mt-4 space-y-3 border-t border-gray-100 pt-4"
+      className="mt-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4"
       encType="multipart/form-data"
     >
       <input type="hidden" name="case_id" value={caseId} />
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
           Dokumenttyp <span className="text-red-500">*</span>
         </label>
         <select
           name="document_type"
           required
-          className="w-full rounded-md border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400"
         >
           {DOCUMENT_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -131,7 +131,7 @@ function UploadForm({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
           Datei <span className="text-red-500">*</span>
         </label>
         <input
@@ -139,23 +139,23 @@ function UploadForm({
           type="file"
           required
           accept=".pdf,.jpg,.jpeg,.png,.heic,.heif"
-          className="w-full text-sm text-gray-700 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+          className="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:rounded file:border-0 file:bg-gray-100 dark:file:bg-gray-700 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-600"
         />
-        <p className="text-xs text-gray-400 mt-0.5">PDF, JPG, PNG, HEIC · max. 15 MB</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">PDF, JPG, PNG, HEIC · max. 15 MB</p>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Notiz</label>
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Notiz</label>
         <input
           name="notes"
           type="text"
           placeholder="Optional…"
-          className="w-full rounded-md border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 placeholder:text-gray-400 dark:placeholder:text-gray-500"
         />
       </div>
 
       {state?.error && (
-        <p className="text-xs text-red-600">{state.error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>
       )}
 
       <div className="flex justify-end">
@@ -171,7 +171,7 @@ function UploadSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+      className="rounded-md bg-gray-900 dark:bg-gray-100 px-3 py-1.5 text-xs font-medium text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200 disabled:opacity-50 transition-colors"
     >
       {pending ? 'Hochladen…' : 'Hochladen'}
     </button>
@@ -190,21 +190,21 @@ function DocumentItem({
   caseId: string;
 }) {
   return (
-    <div className="py-2.5 border-b border-gray-50 last:border-0">
+    <div className="py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             {DOCUMENT_TYPE_LABELS[doc.type] ?? doc.type}
           </p>
-          <p className="text-sm text-gray-900 truncate mt-0.5" title={doc.name}>
+          <p className="text-sm text-gray-900 dark:text-gray-100 truncate mt-0.5" title={doc.name}>
             {doc.name}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             {formatDate(doc.uploaded_at)}
             {doc.file_size_bytes ? ` · ${formatFileSize(doc.file_size_bytes)}` : ''}
           </p>
           {doc.notes && (
-            <p className="text-xs text-gray-500 mt-0.5 italic">{doc.notes}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">{doc.notes}</p>
           )}
         </div>
 
@@ -214,7 +214,7 @@ function DocumentItem({
             target="_blank"
             rel="noopener noreferrer"
             title="Herunterladen"
-            className="flex-shrink-0 mt-1 text-gray-400 hover:text-gray-700 transition-colors"
+            className="flex-shrink-0 mt-1 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
           >
             <Download className="h-4 w-4" />
           </a>
@@ -252,18 +252,18 @@ export default function DocumentsSection({
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-gray-400" />
-          <h2 className="text-sm font-semibold text-gray-900">Dokumente</h2>
+          <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Dokumente</h2>
           {initialDocuments.length > 0 && (
-            <span className="text-xs text-gray-400">{initialDocuments.length}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{initialDocuments.length}</span>
           )}
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
           {showForm ? (
             <><ChevronUp className="h-3.5 w-3.5" />Schließen</>
@@ -274,7 +274,7 @@ export default function DocumentsSection({
       </div>
 
       {initialDocuments.length === 0 && !showForm && (
-        <p className="text-xs text-gray-400 mt-3">Noch keine Dokumente hochgeladen.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Noch keine Dokumente hochgeladen.</p>
       )}
 
       {initialDocuments.map((doc) => (

@@ -5,5 +5,27 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
+    @apply dark:bg-gray-950 dark:text-gray-100;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    @apply dark:ring-blue-400 dark:ring-offset-gray-950;
+  }
+
+  /* Smooth transitions for dark mode */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color;
+    transition-timing-function: ease;
+    transition-duration: 120ms;
+  }
+
+  /* Disable transitions on page load to prevent flash */
+  .no-transitions *,
+  .no-transitions *::before,
+  .no-transitions *::after {
+    transition: none !important;
   }
 }

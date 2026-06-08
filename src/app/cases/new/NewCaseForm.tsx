@@ -13,10 +13,10 @@ import {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const inputCls = (err?: string[]) =>
-  `block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:bg-gray-50 disabled:text-gray-500 ${
+  `block w-full rounded-md border px-3 py-2 text-sm shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500 dark:disabled:text-gray-500 ${
     err?.length
-      ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+      ? 'border-red-300 dark:border-red-700 focus:ring-red-500 focus:border-red-500'
+      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400'
   }`;
 
 function Field({
@@ -32,13 +32,13 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {label}
         {required && <span className="text-red-500 ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
       {error?.[0] && (
-        <p className="mt-1 text-xs text-red-600">{error[0]}</p>
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error[0]}</p>
       )}
     </div>
   );
@@ -52,8 +52,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-900 pb-2 border-b border-gray-100">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 pb-2 border-b border-gray-100 dark:border-gray-800">
         {title}
       </h2>
       {children}
@@ -67,7 +67,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      className="inline-flex items-center rounded-md bg-gray-900 dark:bg-gray-100 px-4 py-2 text-sm font-medium text-white dark:text-gray-900 shadow-sm hover:bg-gray-700 dark:hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       {pending ? 'Wird gespeichert…' : 'Förderfall anlegen'}
     </button>
@@ -87,8 +87,8 @@ export default function NewCaseForm() {
     <form action={formAction} className="space-y-6" noValidate>
       {/* Top-level error banner */}
       {state?.message && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3">
-          <p className="text-sm text-red-700">{state.message}</p>
+        <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3">
+          <p className="text-sm text-red-700 dark:text-red-300">{state.message}</p>
         </div>
       )}
 
@@ -129,7 +129,7 @@ export default function NewCaseForm() {
           </Field>
         </div>
 
-        <p className="text-xs text-gray-400 pt-1">Rechnungsadresse des Kunden</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 pt-1">Rechnungsadresse des Kunden</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2">
@@ -317,13 +317,13 @@ export default function NewCaseForm() {
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
           <span className="text-red-500">*</span> Pflichtfeld
         </p>
         <div className="flex gap-3">
           <Link
             href="/dashboard"
-            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+            className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
           >
             Abbrechen
           </Link>
