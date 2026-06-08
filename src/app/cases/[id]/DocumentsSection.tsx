@@ -252,7 +252,7 @@ export default function DocumentsSection({
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500" />

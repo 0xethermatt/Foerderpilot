@@ -56,7 +56,7 @@ function DetailCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
       <div className="flex items-center gap-2 mb-4">
         <Icon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
@@ -294,7 +294,7 @@ export default async function CaseDetailPage({
         <div className="lg:col-span-5">
           <div className="grid gap-4 xl:grid-cols-2">
             {/* Status & risk editor */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+            <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
               <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Status & Risiko</h2>
               <div className="flex gap-2 mb-4">
                 <StatusBadge status={fundingCase.status as FundingCaseStatus} />

@@ -40,7 +40,7 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 flex items-center gap-4">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5 flex items-center gap-4">
       <div className={`flex-shrink-0 rounded-lg p-2.5 ${accent}`}>
         <Icon className="h-5 w-5" />
       </div>
@@ -330,7 +330,7 @@ export default async function DashboardPage() {
       {/* Main content: cases list + tasks sidebar */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Cases */}
-        <div className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aktive Fälle</h2>
             {activeCases.length > 0 && (
@@ -341,7 +341,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming tasks */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Offene Aufgaben</h2>
             {upcomingTasks.length > 0 && (

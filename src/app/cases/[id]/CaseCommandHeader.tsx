@@ -89,7 +89,7 @@ export default function CaseCommandHeader({
       </Link>
 
       {/* Command card */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
         {/* Title + badges */}
         <div className="flex flex-wrap items-start gap-3 mb-3">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0">
