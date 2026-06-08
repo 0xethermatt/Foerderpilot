@@ -1,7 +1,9 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
+import { FlaskConical } from 'lucide-react';
 import { createFundingCaseAction, type CreateCaseState } from './actions';
 import {
   BUILDING_TYPE_OPTIONS,
@@ -9,6 +11,123 @@ import {
   CURRENT_HEATING_TYPE_OPTIONS,
   PLANNED_HEATING_TYPE_OPTIONS,
 } from '@/lib/constants/form-options';
+
+// ─── Test data presets (dev/test only) ────────────────────────────────────────
+
+type PresetData = Record<string, string>;
+
+interface TestPreset {
+  id: string;
+  label: string;
+  data: PresetData;
+}
+
+const TEST_PRESETS: TestPreset[] = [
+  {
+    id: 'standard',
+    label: 'Guter Standardfall',
+    data: {
+      first_name: 'Max',
+      last_name: 'Mustermann',
+      email: 'max.mustermann@example.test',
+      phone: '+4915112345678',
+      street: 'Birkenweg 7',
+      postal_code: '54321',
+      city: 'Testdorf',
+      project_address_street: 'Birkenweg 7',
+      project_address_postal_code: '54321',
+      project_address_city: 'Testdorf',
+      building_type: 'EFH',
+      housing_units: '1',
+      owner_status: 'owner',
+      self_occupied: 'true',
+      current_heating_type: 'oil',
+      current_heating_year: '1999',
+      planned_heating_type: 'air_water',
+      planned_heat_pump_model: 'Viessmann Vitocal 250-A',
+      estimated_total_cost: '28000',
+      notes: 'Testfall: guter Standardfall mit vollständigen Unterlagen.',
+    },
+  },
+  {
+    id: 'incomplete',
+    label: 'Unvollständiger Fall',
+    data: {
+      first_name: 'Erika',
+      last_name: 'Musterfrau',
+      email: 'erika.musterfrau@example.test',
+      phone: '+4915223456789',
+      street: 'Testgasse 3',
+      postal_code: '99998',
+      city: 'Beispieldorf',
+      project_address_street: 'Testgasse 3',
+      project_address_postal_code: '99998',
+      project_address_city: 'Beispieldorf',
+      building_type: 'EFH',
+      housing_units: '1',
+      owner_status: 'owner',
+      self_occupied: 'true',
+      current_heating_type: 'oil',
+      current_heating_year: '2002',
+      planned_heating_type: 'air_water',
+      planned_heat_pump_model: 'Wärmepumpe ca. 10 kW',
+      estimated_total_cost: '19635',
+      notes: 'Testfall: unvollständiges Angebot, fehlende Dokumente und unklare Modellangaben.',
+    },
+  },
+  {
+    id: 'contract_risk',
+    label: 'Kritischer Vertragsfall',
+    data: {
+      first_name: 'Hans-Peter',
+      last_name: 'Mustermeier',
+      email: 'hans-peter.mustermeier@example.test',
+      phone: '+4915334567890',
+      street: 'Hauptstraße 22',
+      postal_code: '77777',
+      city: 'Testheim',
+      project_address_street: 'Hauptstraße 22',
+      project_address_postal_code: '77777',
+      project_address_city: 'Testheim',
+      building_type: 'EFH',
+      housing_units: '1',
+      owner_status: 'owner',
+      self_occupied: 'true',
+      current_heating_type: 'oil',
+      current_heating_year: '2005',
+      planned_heating_type: 'air_water',
+      planned_heat_pump_model: 'Stiebel Eltron WPL 15 AC',
+      estimated_total_cost: '16800',
+      notes: 'Testfall: Vertrag enthält problematische Klausel zum vorzeitigen Beginn.',
+    },
+  },
+  {
+    id: 'post_approval',
+    label: 'Nach-Zusage-Testfall',
+    data: {
+      first_name: 'Claudia',
+      last_name: 'Beispiel',
+      email: 'claudia.beispiel@example.test',
+      phone: '+4915445678901',
+      street: 'Förderweg 12',
+      postal_code: '88888',
+      city: 'Zuschussstadt',
+      project_address_street: 'Förderweg 12',
+      project_address_postal_code: '88888',
+      project_address_city: 'Zuschussstadt',
+      building_type: 'EFH',
+      housing_units: '1',
+      owner_status: 'owner',
+      self_occupied: 'true',
+      current_heating_type: 'gas',
+      current_heating_year: '2001',
+      planned_heating_type: 'air_water',
+      planned_heat_pump_model: 'Vaillant aroTHERM plus',
+      estimated_total_cost: '31500',
+      notes: 'Testfall: später für KfW-Zusage, Rechnung und BND-Nachweise verwenden.',
+    },
+  },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,12 +202,79 @@ export default function NewCaseForm() {
   );
   const fe = state?.fieldErrors ?? {};
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const [selectedPresetId, setSelectedPresetId] = useState('random');
+  const [filledLabel, setFilledLabel] = useState<string | null>(null);
+
+  function applyPreset(presetId: string) {
+    const form = formRef.current;
+    if (!form) return;
+
+    const preset =
+      presetId === 'random'
+        ? TEST_PRESETS[Math.floor(Math.random() * TEST_PRESETS.length)]
+        : (TEST_PRESETS.find((p) => p.id === presetId) ?? TEST_PRESETS[0]);
+
+    for (const [name, value] of Object.entries(preset.data)) {
+      const el = form.elements.namedItem(name) as
+        | HTMLInputElement
+        | HTMLSelectElement
+        | HTMLTextAreaElement
+        | null;
+      if (el) el.value = value;
+    }
+
+    setFilledLabel(preset.label);
+  }
+
+  const IS_DEV = process.env.NODE_ENV !== 'production';
+
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-6" noValidate>
       {/* Top-level error banner */}
       {state?.message && (
         <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-4 py-3">
           <p className="text-sm text-red-700 dark:text-red-300">{state.message}</p>
+        </div>
+      )}
+
+      {/* ── Test data helper (dev only) ────────────────────────────────── */}
+      {IS_DEV && (
+        <div className="rounded-lg border border-dashed border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <FlaskConical className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+              Testdaten-Hilfe
+            </span>
+            <span className="text-xs text-amber-600 dark:text-amber-500 ml-1">
+              · Nur für die lokale Testphase – keine echten Kundendaten.
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={selectedPresetId}
+              onChange={(e) => setSelectedPresetId(e.target.value)}
+              className="rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-amber-400"
+            >
+              <option value="random">Zufällig</option>
+              {TEST_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => applyPreset(selectedPresetId)}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950 transition-colors"
+            >
+              <FlaskConical className="h-3 w-3" />
+              Testdaten einfügen
+            </button>
+            {filledLabel && (
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                ✓ Testdaten eingefügt: <strong>{filledLabel}</strong>
+              </span>
+            )}
+          </div>
         </div>
       )}
 
