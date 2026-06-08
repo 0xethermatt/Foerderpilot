@@ -11,6 +11,7 @@ import {
 import type { AICheckActionState } from './ai-actions';
 import type { Database } from '@/lib/supabase/database.types';
 import type { FundingPrecheckResult } from '@/lib/ai/types';
+import type { ReadinessSummary } from '@/lib/documents/checklist';
 
 type AICheckRow = Database['public']['Tables']['ai_checks']['Row'];
 
@@ -119,32 +120,79 @@ function ReviewButtons({ checkId, caseId }: { checkId: string; caseId: string })
 
 // ─── Entscheidung summary box ─────────────────────────────────────────────────
 
+const BZA_RE = /\bbza\b|bestätigung zum antrag/i;
+
 function EntscheidungBox({
   result,
   assessmentCfg,
   riskCfg,
+  readiness,
 }: {
   result: FundingPrecheckResult;
   assessmentCfg: { label: string; cls: string } | null;
   riskCfg: { label: string; cls: string } | null;
+  readiness: ReadinessSummary;
 }) {
-  const blocks = result.blocking_items ?? [];
+  // Detect BzA step from AI output (recommended_next_steps or, for older rows, blocking_items)
+  const hasBzaStep =
+    (result.recommended_next_steps ?? []).some((s) => BZA_RE.test(s)) ||
+    (result.blocking_items ?? []).some((b) => BZA_RE.test(b));
 
-  // Hauptgrund: join all blockers when >1, otherwise single item or first risk
-  const hauptgrund: string | null =
-    blocks.length > 1
-      ? `${blocks.length} Pflichtunterlagen vor Antragstellung fehlen: ${blocks.join(', ')}.`
-      : blocks.length === 1
-      ? blocks[0]
-      : result.detected_risks?.[0]?.risk_de ??
-        result.missing_information?.[0] ??
-        null;
+  // Build compound Hauptgrund parts from readiness data + BzA detection
+  const parts: string[] = [];
+  if (readiness.blocking_count > 0) {
+    parts.push(
+      readiness.blocking_count === 1
+        ? '1 Kundenunterlage fehlt'
+        : `${readiness.blocking_count} Kundenunterlagen fehlen`,
+    );
+  }
+  if (readiness.needs_review_count > 0) {
+    parts.push(
+      readiness.needs_review_count === 1
+        ? '1 hochgeladene Unterlage ist ungeprüft'
+        : `${readiness.needs_review_count} hochgeladene Unterlagen sind ungeprüft`,
+    );
+  }
+  if (hasBzaStep) {
+    parts.push(
+      'BzA (Bestätigung zum Antrag) muss noch durch qualifiziertes Fachunternehmen/berechtigte Stelle erstellt werden',
+    );
+  }
 
-  // Nächster Schritt: generic collect-all message when >1 blocker, otherwise first AI step
-  const naechsterSchritt: string | null =
-    blocks.length > 1
-      ? 'Alle fehlenden Pflichtunterlagen beschaffen und prüfen lassen, bevor der Antrag bei KfW gestellt wird.'
-      : result.recommended_next_steps?.[0] ?? null;
+  // Join with Oxford-style "A, B und C."
+  let hauptgrund: string | null = null;
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1];
+    const rest = parts.slice(0, -1);
+    hauptgrund = rest.join(', ') + ' und ' + last + '.';
+  } else if (parts.length === 1) {
+    hauptgrund = parts[0];
+  } else {
+    // Fallback to AI-supplied blocking_items or first detected risk
+    const aiBlocks = (result.blocking_items ?? []).filter((b) => !BZA_RE.test(b));
+    hauptgrund =
+      aiBlocks[0] ??
+      result.detected_risks?.[0]?.risk_de ??
+      result.missing_information?.[0] ??
+      null;
+  }
+
+  // Nächster Schritt — compound when multiple issues, otherwise first AI step
+  let naechsterSchritt: string | null = null;
+  if (parts.length > 1) {
+    const actions: string[] = [];
+    if (readiness.blocking_count > 0) actions.push('fehlende Kundenunterlagen beschaffen');
+    if (readiness.needs_review_count > 0) actions.push('hochgeladene Unterlagen prüfen lassen');
+    if (hasBzaStep) actions.push('BzA durch qualifiziertes Fachunternehmen/berechtigte Stelle erstellen lassen');
+    const last = actions[actions.length - 1];
+    const rest = actions.slice(0, -1);
+    const joined = rest.length > 0 ? rest.join(', ') + ' und ' + last : last;
+    const capitalized = joined.charAt(0).toUpperCase() + joined.slice(1);
+    naechsterSchritt = capitalized + ', bevor der Antrag im KfW-Portal „Meine KfW" gestellt wird.';
+  } else {
+    naechsterSchritt = result.recommended_next_steps?.[0] ?? null;
+  }
 
   return (
     <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
@@ -217,10 +265,12 @@ function AICheckCard({
   check,
   caseId,
   defaultOpen,
+  readiness,
 }: {
   check: AICheckRow;
   caseId: string;
   defaultOpen: boolean;
+  readiness: ReadinessSummary;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -287,6 +337,7 @@ function AICheckCard({
                 result={result}
                 assessmentCfg={assessmentCfg}
                 riskCfg={riskCfg}
+                readiness={readiness}
               />
 
               {/* Narrative summary */}
@@ -461,9 +512,11 @@ function AICheckCard({
 export default function AIChecksSection({
   caseId,
   initialChecks,
+  readiness,
 }: {
   caseId: string;
   initialChecks: AICheckRow[];
+  readiness: ReadinessSummary;
 }) {
   const [state, formAction] = useFormState<AICheckActionState, FormData>(
     runFundingPrecheckAction,
@@ -514,6 +567,7 @@ export default function AIChecksSection({
               check={check}
               caseId={caseId}
               defaultOpen={idx === 0}
+              readiness={readiness}
             />
           ))}
         </div>

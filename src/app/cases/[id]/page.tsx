@@ -326,6 +326,7 @@ export default async function CaseDetailPage({
               <AIChecksSection
                 caseId={fundingCase.id}
                 initialChecks={aiChecks}
+                readiness={readiness}
               />
             </div>
           </div>

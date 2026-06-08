@@ -152,13 +152,17 @@ confidence:
 - "medium" : 1–3 wichtige Felder fehlen oder Risiken erkannt
 - "high"   : Alle wichtigen Felder vorhanden, konsistente Datenlage
 
-blocking_items: Liste aller Punkte, die eine Antragstellung aktuell verhindern.
+blocking_items: NUR fehlende oder abgelehnte kundengelieferte Unterlagen, die eine Antragstellung verhindern.
+  WICHTIG: Die BzA ist KEIN blocking_item — sie ist ein Fachbetriebsschritt und gehört in recommended_next_steps.
   Verwende präzise Formulierungen, z.B.:
   - "Liefer-/Leistungsvertrag mit Fördervorbehalt fehlt"
-  - "BzA (Bestätigung zum Antrag) fehlt"
   - "Angebot des Fachbetriebs fehlt"
+  - "Foto der Altanlage fehlt"
+  - "Eigentumsnachweis fehlt"
+  VERBOTEN in blocking_items: "BzA fehlt" – BzA gehört ausschließlich in recommended_next_steps.
 
-recommended_next_steps: Konkreter nächster Schritt gemäß KfW-458-Prozess, z.B.:
+recommended_next_steps: Konkreter nächster Schritt gemäß KfW-458-Prozess. Hier ist auch die BzA aufzuführen, wenn sie noch fehlt.
+  Beispiele:
   - "Liefer-/Leistungsvertrag mit Fördervorbehalt (aufschiebende Bedingung) erstellen"
   - "BzA (Bestätigung zum Antrag) durch qualifiziertes Fachunternehmen / SHK-Fachbetrieb erstellen lassen"
   - "Antrag im KfW-Portal 'Meine KfW' stellen"
