@@ -23,9 +23,9 @@ const PHASE_LABELS: Record<DocumentPhase, string> = {
 };
 
 const READINESS_BADGE: Record<string, string> = {
-  red:    'bg-red-100 text-red-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  green:  'bg-green-100 text-green-700',
+  red:    'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+  yellow: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
+  green:  'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -36,10 +36,10 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  missing:      'bg-gray-100 text-gray-500',
-  needs_review: 'bg-yellow-50 text-yellow-700',
-  reviewed:     'bg-green-50 text-green-700',
-  rejected:     'bg-red-50 text-red-700',
+  missing:      'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+  needs_review: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
+  reviewed:     'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300',
+  rejected:     'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -75,7 +75,7 @@ function CreateTasksForm({ caseId }: { caseId: string }) {
     <form action={formAction} className="mt-3">
       <input type="hidden" name="case_id" value={caseId} />
       {state?.error && (
-        <p className="text-xs text-red-600 mb-1.5">{state.error}</p>
+        <p className="text-xs text-red-600 dark:text-red-400 mb-1.5">{state.error}</p>
       )}
       <CreateTasksButton />
     </form>
@@ -88,7 +88,7 @@ function CreateTasksButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+      className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
     >
       {pending ? 'Wird erstellt…' : 'Fehlende Aufgaben erstellen'}
     </button>
@@ -106,7 +106,7 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
-            className={`text-sm ${item.blocking ? 'font-medium text-red-700' : 'text-gray-800'}`}
+            className={`text-sm ${item.blocking ? 'font-medium text-red-700 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}`}
           >
             {item.label_de}
           </span>
@@ -117,10 +117,10 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
           </span>
         </div>
         {item.latest_filename && (
-          <p className="text-xs text-gray-400 truncate mt-0.5">{item.latest_filename}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{item.latest_filename}</p>
         )}
         {item.hint_de && (
-          <p className="text-xs text-gray-400 italic mt-0.5">{item.hint_de}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-0.5">{item.hint_de}</p>
         )}
       </div>
     </div>
@@ -133,7 +133,7 @@ function PhaseGroup({ phase, items }: { phase: DocumentPhase; items: ChecklistIt
   if (items.length === 0) return null;
   return (
     <div className="mt-3">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">
+      <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
         {PHASE_LABELS[phase]}
       </p>
       {items.map((item) => (
@@ -165,12 +165,12 @@ export default function FundingChecklistSection({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-gray-400" />
-          <h2 className="text-sm font-semibold text-gray-900">Förderakte-Checkliste</h2>
+          <ClipboardCheck className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Förderakte-Checkliste</h2>
         </div>
         <span
           className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${READINESS_BADGE[readiness.state] ?? ''}`}
@@ -181,15 +181,15 @@ export default function FundingChecklistSection({
 
       {/* Progress summary */}
       <div className="mt-2 text-xs space-y-0.5">
-        <p className="text-gray-500">
+        <p className="text-gray-500 dark:text-gray-400">
           {readiness.reviewed_count}/{readiness.total_required_before_app} Pflichtunterlagen
           geprüft
         </p>
         {readiness.blocking_count > 0 && (
-          <p className="text-red-600">{readiness.blocking_count} fehlend / blockierend</p>
+          <p className="text-red-600 dark:text-red-400">{readiness.blocking_count} fehlend / blockierend</p>
         )}
         {readiness.needs_review_count > 0 && (
-          <p className="text-yellow-700">{readiness.needs_review_count} ausstehend</p>
+          <p className="text-yellow-700 dark:text-yellow-400">{readiness.needs_review_count} ausstehend</p>
         )}
       </div>
 

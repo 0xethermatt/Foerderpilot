@@ -60,13 +60,9 @@ export type DbDocumentStatus =
   | 'missing'
   | 'rejected'
 
-export type DbAICheckType =
-  | 'eligibility_check'
-  | 'document_review'
-  | 'cost_plausibility'
-  | 'deadline_check'
-
-export type DbAICheckResult = 'passed' | 'warning' | 'failed' | 'pending'
+export type DbAICheckType = 'funding_precheck'
+export type DbAICheckStatus = 'draft' | 'completed' | 'failed'
+export type DbAIHumanReviewStatus = 'pending' | 'approved' | 'rejected'
 
 // ─── Database interface ───────────────────────────────────────────────────────
 // GenericSchema shape required by @supabase/postgrest-js:
@@ -313,33 +309,63 @@ export interface Database {
       ai_checks: {
         Row: {
           id: string
-          funding_case_id: string
+          case_id: string
           check_type: DbAICheckType
-          result: DbAICheckResult
-          details: string
+          provider: string
+          model: string
+          status: DbAICheckStatus
+          result_json: Json
+          summary: string | null
+          risk_level: 'green' | 'yellow' | 'red' | null
+          confidence: 'low' | 'medium' | 'high' | null
+          human_review_status: DbAIHumanReviewStatus
           reviewed_by: string | null
           reviewed_at: string | null
+          rule_version: string
+          sources_used: Json
+          disclaimer: string
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          funding_case_id: string
+          case_id: string
           check_type: DbAICheckType
-          result?: DbAICheckResult
-          details: string
+          provider: string
+          model: string
+          status?: DbAICheckStatus
+          result_json: Json
+          summary?: string | null
+          risk_level?: 'green' | 'yellow' | 'red' | null
+          confidence?: 'low' | 'medium' | 'high' | null
+          human_review_status?: DbAIHumanReviewStatus
           reviewed_by?: string | null
           reviewed_at?: string | null
+          rule_version: string
+          sources_used?: Json
+          disclaimer: string
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          funding_case_id?: string
+          case_id?: string
           check_type?: DbAICheckType
-          result?: DbAICheckResult
-          details?: string
+          provider?: string
+          model?: string
+          status?: DbAICheckStatus
+          result_json?: Json
+          summary?: string | null
+          risk_level?: 'green' | 'yellow' | 'red' | null
+          confidence?: 'low' | 'medium' | 'high' | null
+          human_review_status?: DbAIHumanReviewStatus
           reviewed_by?: string | null
           reviewed_at?: string | null
+          rule_version?: string
+          sources_used?: Json
+          disclaimer?: string
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
