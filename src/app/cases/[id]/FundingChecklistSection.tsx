@@ -66,7 +66,7 @@ function CreateTasksForm({ caseId }: { caseId: string }) {
   if (state?.success && state.created) {
     return (
       <p className="text-xs text-green-700 mt-3">
-        {state.created} Aufgabe{state.created !== 1 ? 'n' : ''} erstellt.
+        Aufgaben aus Förderakte erstellt: {state.created} neue Aufgabe{state.created !== 1 ? 'n' : ''}.
       </p>
     );
   }
@@ -90,7 +90,7 @@ function CreateTasksButton() {
       disabled={pending}
       className="w-full rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
     >
-      {pending ? 'Wird erstellt…' : 'Fehlende Aufgaben erstellen'}
+      {pending ? 'Wird erstellt…' : 'Aufgaben aus Förderakte erstellen'}
     </button>
   );
 }
@@ -198,8 +198,10 @@ export default function FundingChecklistSection({
         <PhaseGroup key={phase} phase={phase} items={grouped[phase]} />
       ))}
 
-      {/* Create tasks button — only when blocking items exist */}
-      {readiness.blocking_count > 0 && <CreateTasksForm caseId={caseId} />}
+      {/* Create tasks button — when blocking or needs-review items exist */}
+      {(readiness.blocking_count > 0 || readiness.needs_review_count > 0) && (
+        <CreateTasksForm caseId={caseId} />
+      )}
     </div>
   );
 }

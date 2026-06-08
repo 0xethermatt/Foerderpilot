@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
-import { computeChecklist, getBlockingTaskTitles } from '@/lib/documents/checklist';
+import { computeChecklist, getBlockingTaskTitles, getNeedsReviewTaskTitles } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 
 type DocumentRow = Database['public']['Tables']['documents']['Row'];
@@ -68,12 +68,27 @@ export async function createMissingDocumentTasksAction(
   const documents = docsResult.data ?? [];
   const existingTitles = new Set((tasksResult.data ?? []).map((t) => t.title));
 
-  // Compute which documents are blocking and need tasks
   const items = computeChecklist(documents);
-  const blockingTasks = getBlockingTaskTitles(items);
 
-  // Only create tasks that don't already exist as open tasks
-  const toCreate = blockingTasks.filter((b) => !existingTitles.has(b.task_title));
+  // Upload tasks (high priority) for blocking/missing documents
+  const uploadRows = getBlockingTaskTitles(items)
+    .filter((b) => !existingTitles.has(b.task_title))
+    .map((b) => ({
+      funding_case_id: case_id,
+      title: b.task_title,
+      priority: 'high' as const,
+    }));
+
+  // Review tasks (normal priority) for uploaded-but-unreviewed documents
+  const reviewRows = getNeedsReviewTaskTitles(items)
+    .filter((b) => !existingTitles.has(b.task_title))
+    .map((b) => ({
+      funding_case_id: case_id,
+      title: b.task_title,
+      priority: 'normal' as const,
+    }));
+
+  const toCreate = [...uploadRows, ...reviewRows];
 
   if (toCreate.length === 0) {
     return {
@@ -83,13 +98,7 @@ export async function createMissingDocumentTasksAction(
     };
   }
 
-  const { error } = await supabase.from('tasks').insert(
-    toCreate.map((b) => ({
-      funding_case_id: case_id,
-      title: b.task_title,
-      priority: 'high' as const,
-    })),
-  );
+  const { error } = await supabase.from('tasks').insert(toCreate);
 
   if (error) return { error: `Fehler: ${error.message}` };
 

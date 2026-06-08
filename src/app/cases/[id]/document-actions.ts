@@ -42,11 +42,11 @@ const VALID_STATUSES = new Set([
 // Task titles auto-completed when the matching document type is marked reviewed.
 // Only exact-title matches on open tasks are closed.
 const TASK_TITLES_BY_DOC_TYPE: Record<string, string[]> = {
-  offer:                 ['Angebot hochladen'],
-  contract:              ['Liefer-/Leistungsvertrag hochladen', 'Liefer-/Leistungsvertrag anfordern'],
-  old_heating_photo:     ['Foto Altanlage anfordern'],
-  old_heating_nameplate: ['Foto Typenschild Altanlage anfordern'],
-  owner_proof:           ['Eigentumsnachweis anfordern', 'Eigentümernachweis anfordern'],
+  offer:                 ['Angebot hochladen', 'Angebot prüfen'],
+  contract:              ['Liefer-/Leistungsvertrag hochladen', 'Liefer-/Leistungsvertrag anfordern', 'Liefer-/Leistungsvertrag prüfen'],
+  old_heating_photo:     ['Foto Altanlage anfordern', 'Foto Altanlage prüfen'],
+  old_heating_nameplate: ['Foto Typenschild Altanlage anfordern', 'Foto Typenschild Altanlage prüfen'],
+  owner_proof:           ['Eigentumsnachweis anfordern', 'Eigentümernachweis anfordern', 'Eigentumsnachweis prüfen'],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

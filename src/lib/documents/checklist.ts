@@ -48,6 +48,7 @@ interface DocSpec {
   phase: DocumentPhase;
   required: boolean;
   task_title?: string;
+  review_task_title?: string;
   hint_de?: string;
 }
 
@@ -59,6 +60,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     phase: 'before_application',
     required: true,
     task_title: 'Angebot hochladen',
+    review_task_title: 'Angebot prüfen',
     hint_de: 'Kostenangebot des Installateurs erforderlich.',
   },
   {
@@ -67,6 +69,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     phase: 'before_application',
     required: true,
     task_title: 'Liefer-/Leistungsvertrag hochladen',
+    review_task_title: 'Liefer-/Leistungsvertrag prüfen',
     hint_de: 'Vertrag muss vor Antragstellung vorliegen.',
   },
   {
@@ -75,6 +78,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     phase: 'before_application',
     required: true,
     task_title: 'Foto Altanlage anfordern',
+    review_task_title: 'Foto Altanlage prüfen',
     hint_de: 'Foto der bestehenden Heizanlage.',
   },
   {
@@ -83,6 +87,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     phase: 'before_application',
     required: true,
     task_title: 'Foto Typenschild Altanlage anfordern',
+    review_task_title: 'Foto Typenschild Altanlage prüfen',
     hint_de: 'Typenschild mit Baujahr und Leistungsangabe.',
   },
   {
@@ -91,6 +96,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     phase: 'before_application',
     required: true,
     task_title: 'Eigentumsnachweis anfordern',
+    review_task_title: 'Eigentumsnachweis prüfen',
     hint_de: 'Grundbuchauszug oder Kaufvertrag.',
   },
   // ── After approval ─────────────────────────────────────────────────────────
@@ -231,6 +237,22 @@ export function getBlockingTaskTitles(
     const spec = DOCUMENT_SPEC.find((s) => s.document_type === item.document_type);
     return spec?.task_title
       ? [{ document_type: item.document_type, task_title: spec.task_title }]
+      : [];
+  });
+}
+
+export function getNeedsReviewTaskTitles(
+  items: ChecklistItem[],
+): Array<{ document_type: string; task_title: string }> {
+  return items.flatMap((item) => {
+    if (
+      item.phase !== 'before_application' ||
+      !item.required ||
+      item.status !== 'needs_review'
+    ) return [];
+    const spec = DOCUMENT_SPEC.find((s) => s.document_type === item.document_type);
+    return spec?.review_task_title
+      ? [{ document_type: item.document_type, task_title: spec.review_task_title }]
       : [];
   });
 }
