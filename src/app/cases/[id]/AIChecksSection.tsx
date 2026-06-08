@@ -128,13 +128,23 @@ function EntscheidungBox({
   assessmentCfg: { label: string; cls: string } | null;
   riskCfg: { label: string; cls: string } | null;
 }) {
-  const hauptgrund =
-    result.blocking_items?.[0] ??
-    result.detected_risks?.[0]?.risk_de ??
-    result.missing_information?.[0] ??
-    null;
+  const blocks = result.blocking_items ?? [];
 
-  const naechsterSchritt = result.recommended_next_steps?.[0] ?? null;
+  // Hauptgrund: join all blockers when >1, otherwise single item or first risk
+  const hauptgrund: string | null =
+    blocks.length > 1
+      ? `${blocks.length} Pflichtunterlagen vor Antragstellung fehlen: ${blocks.join(', ')}.`
+      : blocks.length === 1
+      ? blocks[0]
+      : result.detected_risks?.[0]?.risk_de ??
+        result.missing_information?.[0] ??
+        null;
+
+  // Nächster Schritt: generic collect-all message when >1 blocker, otherwise first AI step
+  const naechsterSchritt: string | null =
+    blocks.length > 1
+      ? 'Alle fehlenden Pflichtunterlagen beschaffen und prüfen lassen, bevor der Antrag bei KfW gestellt wird.'
+      : result.recommended_next_steps?.[0] ?? null;
 
   return (
     <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
