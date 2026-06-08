@@ -6,7 +6,7 @@ export const metadata = { title: 'Neuer Förderfall – Förderpilot' };
 
 export default function NewCasePage() {
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       {/* Breadcrumb */}
       <Link
         href="/dashboard"
