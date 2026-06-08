@@ -106,7 +106,7 @@ const DOCUMENT_SPEC: DocSpec[] = [
     label_de: 'KfW-Bewilligung',
     phase: 'after_approval',
     required: true,
-    hint_de: 'Bewilligungsschreiben von KfW/BAFA.',
+    hint_de: 'Förderzusage-Schreiben von KfW (Meine KfW).',
   },
   // ── After completion ───────────────────────────────────────────────────────
   {

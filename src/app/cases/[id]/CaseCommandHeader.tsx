@@ -45,8 +45,8 @@ function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus
   if (status === 'funding_check_done') return 'Angebot erstellen und Vertrag vorbereiten.';
   if (status === 'offer_created' || status === 'contract_review_needed') return 'Vertrag prüfen und unterzeichnen.';
   if (status === 'contract_signed') return 'BZA vorbereiten und Antrag stellen.';
-  if (status === 'bza_prepared') return 'Antrag bei KfW/BAFA einreichen.';
-  if (status === 'application_submitted') return 'Auf Genehmigung von KfW/BAFA warten.';
+  if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
+  if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
   if (status === 'approval_received') return 'Ausführung freigeben.';
   if (status === 'execution_released') return 'Ausführung läuft – Nachweise vorbereiten.';
   if (status === 'proof_documents_pending') return 'Nachweise hochladen und einreichen.';
