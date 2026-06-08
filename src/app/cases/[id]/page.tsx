@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import {
-  ChevronLeft,
   MapPin,
   Thermometer,
   Building2,
@@ -14,6 +12,7 @@ import TasksSection from './TasksSection';
 import DocumentsSection from './DocumentsSection';
 import FundingChecklistSection from './FundingChecklistSection';
 import AIChecksSection from './AIChecksSection';
+import CaseCommandHeader from './CaseCommandHeader';
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
@@ -25,6 +24,9 @@ import {
   CURRENT_HEATING_TYPE_LABELS,
   PLANNED_HEATING_TYPE_LABELS,
 } from '@/lib/constants/form-options';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
+
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 type CustomerRow    = Database['public']['Tables']['customers']['Row'];
 type TaskRow        = Database['public']['Tables']['tasks']['Row'];
@@ -40,14 +42,6 @@ function formatCurrency(n?: number | null) {
     currency: 'EUR',
     maximumFractionDigits: 0,
   }).format(n);
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -159,7 +153,6 @@ export default async function CaseDetailPage({
 
   const aiChecks = aiChecksRaw ?? [];
 
-  // Compute checklist and readiness from uploaded documents
   const checklistItems = computeChecklist(documents);
   const readiness = computeReadiness(checklistItems);
 
@@ -183,35 +176,17 @@ export default async function CaseDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mb-4"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Zurück zur Übersicht
-        </Link>
-
-        <div className="flex flex-wrap items-start gap-3">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0">
-            {fundingCase.title}
-          </h1>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <StatusBadge status={fundingCase.status} />
-            <RiskBadge risk={fundingCase.risk_level} />
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Angelegt am {formatDate(fundingCase.created_at)} · Zuletzt geändert{' '}
-          {formatDate(fundingCase.updated_at)}
-        </p>
-      </div>
+      {/* Command header */}
+      <CaseCommandHeader
+        fundingCase={fundingCase}
+        customer={customer ?? null}
+        tasks={tasks ?? []}
+        readiness={readiness}
+      />
 
       {/* Body */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left column */}
+        {/* ── Left column: overview + documents ── */}
         <div className="lg:col-span-2 space-y-5">
           {/* Customer */}
           {customer && (
@@ -304,9 +279,18 @@ export default async function CaseDetailPage({
               <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{fundingCase.notes}</p>
             </DetailCard>
           )}
+
+          {/* Documents */}
+          <div id="documents">
+            <DocumentsSection
+              caseId={fundingCase.id}
+              initialDocuments={documents}
+              signedUrls={signedUrls}
+            />
+          </div>
         </div>
 
-        {/* Right column */}
+        {/* ── Right column: status, checklist, tasks, AI checks ── */}
         <div className="space-y-4">
           {/* Status & risk editor */}
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5">
@@ -322,21 +306,22 @@ export default async function CaseDetailPage({
             />
           </div>
 
-          <TasksSection caseId={fundingCase.id} initialTasks={tasks ?? []} />
           <FundingChecklistSection
             caseId={fundingCase.id}
             items={checklistItems}
             readiness={readiness}
           />
-          <AIChecksSection
-            caseId={fundingCase.id}
-            initialChecks={aiChecks}
-          />
-          <DocumentsSection
-            caseId={fundingCase.id}
-            initialDocuments={documents}
-            signedUrls={signedUrls}
-          />
+
+          <div id="tasks">
+            <TasksSection caseId={fundingCase.id} initialTasks={tasks ?? []} />
+          </div>
+
+          <div id="ai-checks">
+            <AIChecksSection
+              caseId={fundingCase.id}
+              initialChecks={aiChecks}
+            />
+          </div>
         </div>
       </div>
     </div>
