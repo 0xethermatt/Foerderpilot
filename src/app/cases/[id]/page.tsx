@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
-  Bot,
   ArrowRight,
   MapPin,
   Thermometer,
@@ -15,6 +14,7 @@ import StatusRiskEditor from './StatusRiskEditor';
 import TasksSection from './TasksSection';
 import DocumentsSection from './DocumentsSection';
 import FundingChecklistSection from './FundingChecklistSection';
+import AIChecksSection from './AIChecksSection';
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
@@ -27,9 +27,10 @@ import {
   PLANNED_HEATING_TYPE_LABELS,
 } from '@/lib/constants/form-options';
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
-type CustomerRow = Database['public']['Tables']['customers']['Row'];
-type TaskRow = Database['public']['Tables']['tasks']['Row'];
-type DocumentRow = Database['public']['Tables']['documents']['Row'];
+type CustomerRow    = Database['public']['Tables']['customers']['Row'];
+type TaskRow        = Database['public']['Tables']['tasks']['Row'];
+type DocumentRow    = Database['public']['Tables']['documents']['Row'];
+type AICheckRow     = Database['public']['Tables']['ai_checks']['Row'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -169,6 +170,15 @@ export default async function CaseDetailPage({
     .returns<DocumentRow[]>();
 
   const documents = documentsRaw ?? [];
+
+  const { data: aiChecksRaw } = await supabase
+    .from('ai_checks')
+    .select()
+    .eq('case_id', fundingCase.id)
+    .order('created_at', { ascending: false })
+    .returns<AICheckRow[]>();
+
+  const aiChecks = aiChecksRaw ?? [];
 
   // Compute checklist and readiness from uploaded documents
   const checklistItems = computeChecklist(documents);
@@ -344,15 +354,14 @@ export default async function CaseDetailPage({
             items={checklistItems}
             readiness={readiness}
           />
+          <AIChecksSection
+            caseId={fundingCase.id}
+            initialChecks={aiChecks}
+          />
           <DocumentsSection
             caseId={fundingCase.id}
             initialDocuments={documents}
             signedUrls={signedUrls}
-          />
-          <PlaceholderCard
-            title="KI-Prüfungen"
-            icon={Bot}
-            hint="KI-Prüfungen erfordern manuelle Freigabe – werden später ergänzt."
           />
         </div>
       </div>
