@@ -12,6 +12,12 @@ export type DocumentActionState = {
   success?: boolean;
 } | null;
 
+export type UpdateStatusState = {
+  tasksCompleted: number;
+  wasReviewed: boolean;
+  error?: string;
+} | null;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ALLOWED_MIME_TYPES = [
@@ -32,6 +38,16 @@ const VALID_DOCUMENT_TYPES = new Set([
 const VALID_STATUSES = new Set([
   'uploaded', 'needs_review', 'reviewed', 'missing', 'rejected',
 ]);
+
+// Task titles auto-completed when the matching document type is marked reviewed.
+// Only exact-title matches on open tasks are closed.
+const TASK_TITLES_BY_DOC_TYPE: Record<string, string[]> = {
+  offer:                 ['Angebot hochladen'],
+  contract:              ['Liefer-/Leistungsvertrag hochladen', 'Liefer-/Leistungsvertrag anfordern'],
+  old_heating_photo:     ['Foto Altanlage anfordern'],
+  old_heating_nameplate: ['Foto Typenschild Altanlage anfordern'],
+  owner_proof:           ['Eigentumsnachweis anfordern', 'Eigentümernachweis anfordern'],
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +88,6 @@ export async function uploadCaseDocumentAction(
   const notes = (formData.get('notes') as string | null) || undefined;
   const file = formData.get('file') as File | null;
 
-  // Validate inputs
   if (!case_id || !/^[0-9a-f-]{36}$/i.test(case_id)) {
     return { error: 'Ungültige Fall-ID.' };
   }
@@ -91,7 +106,6 @@ export async function uploadCaseDocumentAction(
 
   const supabase = createServiceClient();
 
-  // Verify case exists
   const { data: caseRow } = await supabase
     .from('funding_cases')
     .select('id')
@@ -101,12 +115,10 @@ export async function uploadCaseDocumentAction(
     return { error: 'Förderfall nicht gefunden.' };
   }
 
-  // Build storage path
   const timestamp = Date.now();
   const safeFilename = sanitizeFilename(file.name);
   const storagePath = `cases/${case_id}/${document_type}/${timestamp}-${safeFilename}`;
 
-  // Upload file to Supabase Storage
   const buffer = Buffer.from(await file.arrayBuffer());
   const { error: storageError } = await supabase.storage
     .from('case-documents')
@@ -119,7 +131,6 @@ export async function uploadCaseDocumentAction(
     return { error: `Upload fehlgeschlagen: ${storageError.message}` };
   }
 
-  // Insert document row
   const { error: dbError } = await supabase.from('documents').insert({
     funding_case_id: case_id,
     name: file.name,
@@ -133,7 +144,6 @@ export async function uploadCaseDocumentAction(
   });
 
   if (dbError) {
-    // Clean up the orphaned storage object
     await supabase.storage.from('case-documents').remove([storagePath]);
     return { error: `Datenbankfehler: ${dbError.message}` };
   }
@@ -146,16 +156,29 @@ export async function uploadCaseDocumentAction(
 
 // ─── Update document status ───────────────────────────────────────────────────
 
-export async function updateDocumentStatusAction(formData: FormData): Promise<void> {
-  if (!isServiceRoleConfigured()) return;
+export async function updateDocumentStatusAction(
+  _prev: UpdateStatusState,
+  formData: FormData,
+): Promise<UpdateStatusState> {
+  if (!isServiceRoleConfigured()) return null;
 
   const document_id = formData.get('document_id') as string;
-  const case_id = formData.get('case_id') as string;
-  const status = formData.get('status') as string;
+  const case_id     = formData.get('case_id')     as string;
+  const status      = formData.get('status')      as string;
 
-  if (!document_id || !case_id || !VALID_STATUSES.has(status)) return;
+  if (!document_id || !case_id || !VALID_STATUSES.has(status)) return null;
 
   const supabase = createServiceClient();
+
+  // Fetch document type — needed for task matching, also verifies case ownership
+  const { data: docRow } = await supabase
+    .from('documents')
+    .select('type')
+    .eq('id', document_id)
+    .eq('funding_case_id', case_id)
+    .single();
+
+  if (!docRow) return null;
 
   const { error } = await supabase
     .from('documents')
@@ -163,9 +186,43 @@ export async function updateDocumentStatusAction(formData: FormData): Promise<vo
     .eq('id', document_id)
     .eq('funding_case_id', case_id);
 
-  if (error) return;
+  if (error) return { tasksCompleted: 0, wasReviewed: false, error: error.message };
 
   await logAudit(case_id, 'document_status_updated', `${document_id}: ${status}`);
 
+  let tasksCompleted = 0;
+
+  if (status === 'reviewed') {
+    const matchingTitles = TASK_TITLES_BY_DOC_TYPE[docRow.type] ?? [];
+
+    if (matchingTitles.length > 0) {
+      const { data: openTasks } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('funding_case_id', case_id)
+        .eq('completed', false)
+        .in('title', matchingTitles);
+
+      if (openTasks && openTasks.length > 0) {
+        const now = new Date().toISOString();
+        await supabase
+          .from('tasks')
+          .update({ completed: true, completed_at: now })
+          .in('id', openTasks.map((t) => t.id));
+
+        tasksCompleted = openTasks.length;
+
+        await logAudit(
+          case_id,
+          'task_auto_completed_by_document_review',
+          `doc_type=${docRow.type} tasks=${openTasks.map((t) => t.id).join(',')}`,
+        );
+      }
+    }
+  }
+
   revalidatePath(`/cases/${case_id}`);
+  revalidatePath('/dashboard');
+
+  return { tasksCompleted, wasReviewed: status === 'reviewed' };
 }

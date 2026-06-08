@@ -7,7 +7,7 @@ import {
   uploadCaseDocumentAction,
   updateDocumentStatusAction,
 } from './document-actions';
-import type { DocumentActionState } from './document-actions';
+import type { DocumentActionState, UpdateStatusState } from './document-actions';
 import {
   DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -54,23 +54,40 @@ function StatusUpdateForm({
   caseId: string;
   currentStatus: string;
 }) {
+  const [state, formAction] = useFormState<UpdateStatusState, FormData>(
+    updateDocumentStatusAction,
+    null,
+  );
+
   return (
-    <form action={updateDocumentStatusAction} className="flex items-center gap-1.5 mt-1.5">
-      <input type="hidden" name="document_id" value={documentId} />
-      <input type="hidden" name="case_id" value={caseId} />
-      <select
-        name="status"
-        defaultValue={currentStatus}
-        className="text-xs rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
-      >
-        {DOCUMENT_STATUS_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <StatusSubmitButton />
-    </form>
+    <div>
+      <form action={formAction} className="flex items-center gap-1.5 mt-1.5">
+        <input type="hidden" name="document_id" value={documentId} />
+        <input type="hidden" name="case_id" value={caseId} />
+        <select
+          name="status"
+          defaultValue={currentStatus}
+          className="text-xs rounded border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        >
+          {DOCUMENT_STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <StatusSubmitButton />
+      </form>
+      {state?.wasReviewed && (
+        <p className="mt-1 text-xs text-green-700 dark:text-green-400">
+          {state.tasksCompleted > 0
+            ? `Dokument geprüft. ${state.tasksCompleted === 1 ? 'Passende Aufgabe wurde' : `${state.tasksCompleted} passende Aufgaben wurden`} automatisch erledigt.`
+            : 'Dokument geprüft.'}
+        </p>
+      )}
+      {state?.error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{state.error}</p>
+      )}
+    </div>
   );
 }
 
