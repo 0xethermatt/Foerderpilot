@@ -26,15 +26,6 @@ function formatDate(iso: string) {
   });
 }
 
-function formatCurrency(amount?: number | null) {
-  if (amount == null) return '–';
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 
 function StatCard({
@@ -66,7 +57,7 @@ function StatCard({
 const PRIORITY_DOT: Record<string, string> = {
   high: 'bg-red-500',
   normal: 'bg-yellow-400',
-  low: 'bg-gray-300',
+  low: 'bg-gray-300 dark:bg-gray-600',
 };
 
 function UpcomingTasks({
@@ -77,30 +68,39 @@ function UpcomingTasks({
   caseMap: Record<string, string>;
 }) {
   if (tasks.length === 0) {
-    return <p className="text-xs text-gray-400 dark:text-gray-500">Keine offenen Aufgaben.</p>;
+    return (
+      <div className="py-4 text-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Keine offenen Aufgaben.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Alle Fälle sind auf dem aktuellen Stand.
+        </p>
+      </div>
+    );
   }
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-3">
       {tasks.map((t) => {
         const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
         return (
-          <li key={t.id} className="flex items-start gap-2">
+          <li key={t.id} className="flex items-start gap-2.5">
             <span
               className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[t.priority] ?? 'bg-gray-300'}`}
             />
             <div className="min-w-0">
               <Link
                 href={`/cases/${t.funding_case_id}`}
-                className="text-sm text-gray-800 dark:text-gray-200 hover:underline line-clamp-1"
+                className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:underline line-clamp-1"
               >
                 {t.title}
               </Link>
               {caseMap[t.funding_case_id] && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{caseMap[t.funding_case_id]}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                  {caseMap[t.funding_case_id]}
+                </p>
               )}
               {t.due_date && (
-                <p className={`text-xs ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {overdue ? 'Überfällig · ' : ''}
+                <p className={`text-xs mt-0.5 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {overdue ? 'Überfällig · ' : 'Fällig · '}
                   {new Date(t.due_date).toLocaleDateString('de-DE', {
                     day: '2-digit',
                     month: '2-digit',
@@ -116,16 +116,96 @@ function UpcomingTasks({
   );
 }
 
-// ─── Cases table ───────────────────────────────────────────────────────────────
+// ─── Cases list (div-based for clickable rows + responsive cards) ──────────────
 
-function CasesTable({ cases }: { cases: DashboardCase[] }) {
+const COL = 'sm:grid sm:grid-cols-[180px_1fr_120px_90px_48px_96px] sm:items-center sm:gap-4';
+
+function CaseRow({ c }: { c: DashboardCase }) {
+  const customerName = c.customer
+    ? `${c.customer.last_name}, ${c.customer.first_name}`
+    : '–';
+
+  return (
+    <Link
+      href={`/cases/${c.id}`}
+      className="block hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+    >
+      {/* Mobile card */}
+      <div className="sm:hidden px-4 py-3.5">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
+              {customerName}
+            </p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-0.5">
+              {c.title}
+            </p>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 mt-0.5">
+            {formatDate(c.updated_at)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <StatusBadge status={c.status as FundingCaseStatus} />
+          <RiskBadge risk={c.risk_level as RiskLevel} />
+          {c.open_task_count > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs text-orange-700 dark:text-orange-400 font-medium">
+              <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-orange-100 dark:bg-orange-900/40 text-xs font-semibold">
+                {c.open_task_count}
+              </span>
+              Aufgaben
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop row */}
+      <div className={`hidden ${COL} py-3`}>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+          {customerName}
+        </p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 truncate group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors">
+          {c.title}
+        </p>
+        <div className="flex">
+          <StatusBadge status={c.status as FundingCaseStatus} />
+        </div>
+        <div className="flex">
+          <RiskBadge risk={c.risk_level as RiskLevel} />
+        </div>
+        <div className="flex justify-center">
+          {c.open_task_count > 0 ? (
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold">
+              {c.open_task_count}
+            </span>
+          ) : (
+            <span className="text-gray-300 dark:text-gray-600">–</span>
+          )}
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          {formatDate(c.updated_at)}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function CasesList({ cases }: { cases: DashboardCase[] }) {
   if (cases.length === 0) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-sm text-gray-400 dark:text-gray-500">Noch keine Fälle vorhanden.</p>
+      <div className="py-14 flex flex-col items-center text-center">
+        <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-3">
+          <Folder className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+        </div>
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Noch keine aktiven Förderfälle
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4 max-w-[220px]">
+          Legen Sie den ersten Fall an, um mit der Vorbereitung zu starten.
+        </p>
         <Link
           href="/cases/new"
-          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-gray-100 px-3 py-2 text-sm font-medium text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Ersten Förderfall anlegen
@@ -135,63 +215,25 @@ function CasesTable({ cases }: { cases: DashboardCase[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
-        <thead>
-          <tr>
-            {['Kunde', 'Titel', 'Status', 'Risiko', 'Geschätzte Kosten', 'Off. Aufgaben', 'Zuletzt geändert'].map(
-              (h) => (
-                <th
-                  key={h}
-                  className="py-3 px-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide first:pl-0 last:pr-0"
-                >
-                  {h}
-                </th>
-              ),
-            )}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-          {cases.map((c) => (
-            <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-              <td className="py-3 px-4 first:pl-0 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                {c.customer
-                  ? `${c.customer.last_name}, ${c.customer.first_name}`
-                  : '–'}
-              </td>
-              <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 max-w-[200px] truncate">
-                <Link
-                  href={`/cases/${c.id}`}
-                  className="hover:text-gray-900 dark:hover:text-gray-100 hover:underline"
-                >
-                  {c.title}
-                </Link>
-              </td>
-              <td className="py-3 px-4">
-                <StatusBadge status={c.status as FundingCaseStatus} />
-              </td>
-              <td className="py-3 px-4">
-                <RiskBadge risk={c.risk_level as RiskLevel} />
-              </td>
-              <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                {formatCurrency(c.estimated_cost)}
-              </td>
-              <td className="py-3 px-4 text-sm text-center">
-                {c.open_task_count > 0 ? (
-                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold">
-                    {c.open_task_count}
-                  </span>
-                ) : (
-                  <span className="text-gray-300 dark:text-gray-600">–</span>
-                )}
-              </td>
-              <td className="py-3 px-4 last:pr-0 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {formatDate(c.updated_at)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      {/* Desktop header row */}
+      <div className={`hidden ${COL} pb-2.5 border-b border-gray-100 dark:border-gray-800`}>
+        {['Kunde', 'Fall', 'Status', 'Risiko', 'Aufgaben', 'Aktualisiert'].map((h) => (
+          <p
+            key={h}
+            className={`text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide ${h === 'Aufgaben' ? 'text-center' : ''}`}
+          >
+            {h}
+          </p>
+        ))}
+      </div>
+
+      {/* Rows */}
+      <div className="-mx-6 sm:mx-0 divide-y divide-gray-50 dark:divide-gray-800 sm:divide-gray-100">
+        {cases.map((c) => (
+          <CaseRow key={c.id} c={c} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -199,7 +241,6 @@ function CasesTable({ cases }: { cases: DashboardCase[] }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  // ── Fallback when Supabase is not configured ─────────────────────────────
   if (!isServiceRoleConfigured()) {
     return (
       <div className="space-y-4">
@@ -216,7 +257,6 @@ export default async function DashboardPage() {
     );
   }
 
-  // ── Load data ────────────────────────────────────────────────────────────
   const supabase = createServiceClient();
 
   const [casesResult, taskCountResult, upcomingTasksResult] = await Promise.all([
@@ -239,7 +279,6 @@ export default async function DashboardPage() {
 
   const allCases = casesResult.data ?? [];
 
-  // Load customers for the cases we have
   let customers: Pick<CustomerRow, 'id' | 'first_name' | 'last_name'>[] = [];
   if (allCases.length > 0) {
     const customerIds = Array.from(new Set(allCases.map((c) => c.customer_id)));
@@ -250,25 +289,21 @@ export default async function DashboardPage() {
     customers = data ?? [];
   }
 
-  // Build lookup maps
   const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
   const taskCountMap: Record<string, number> = {};
   for (const t of taskCountResult.data ?? []) {
     taskCountMap[t.funding_case_id] = (taskCountMap[t.funding_case_id] ?? 0) + 1;
   }
 
-  // Enrich cases
   const enrichedCases: DashboardCase[] = allCases.map((c) => ({
     ...c,
     customer: customerMap[c.customer_id] ?? null,
     open_task_count: taskCountMap[c.id] ?? 0,
   }));
 
-  // Case title map for task sidebar
   const caseTitleMap = Object.fromEntries(allCases.map((c) => [c.id, c.title]));
   const upcomingTasks = upcomingTasksResult.data ?? [];
 
-  // ── Derived stats ────────────────────────────────────────────────────────
   const activeCases = enrichedCases.filter((c) => c.status !== 'completed');
   const criticalCases = enrichedCases.filter((c) => c.risk_level === 'red');
   const totalOpenTasks = Object.values(taskCountMap).reduce((s, n) => s + n, 0);
@@ -276,63 +311,36 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page title */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Übersicht</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Alle aktiven Fördervorbereitungsfälle auf einen Blick.
-          </p>
-        </div>
-        <Link
-          href="/cases/new"
-          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-gray-100 px-3 py-2 text-sm font-medium text-white dark:text-gray-900 shadow-sm hover:bg-gray-700 dark:hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors whitespace-nowrap"
-        >
-          <Plus className="h-4 w-4" />
-          Neuer Förderfall
-        </Link>
+      {/* Page title — no duplicate CTA, nav already has it */}
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Übersicht</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Alle aktiven Fördervorbereitungsfälle auf einen Blick.
+        </p>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Aktive Fälle"
-          value={activeCases.length}
-          icon={Folder}
-          accent="bg-blue-50 text-blue-600"
-        />
-        <StatCard
-          label="Kritische Fälle"
-          value={criticalCases.length}
-          icon={AlertTriangle}
-          accent="bg-red-50 text-red-600"
-        />
-        <StatCard
-          label="Offene Aufgaben"
-          value={totalOpenTasks}
-          icon={ClipboardList}
-          accent="bg-amber-50 text-amber-600"
-        />
-        <StatCard
-          label="Abgeschlossen"
-          value={completedCases.length}
-          icon={CheckCircle2}
-          accent="bg-green-50 text-green-600"
-        />
+        <StatCard label="Aktive Fälle"    value={activeCases.length}    icon={Folder}       accent="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400" />
+        <StatCard label="Kritische Fälle" value={criticalCases.length}  icon={AlertTriangle} accent="bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400" />
+        <StatCard label="Offene Aufgaben" value={totalOpenTasks}         icon={ClipboardList} accent="bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400" />
+        <StatCard label="Abgeschlossen"   value={completedCases.length} icon={CheckCircle2}  accent="bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400" />
       </div>
 
-      {/* Main content: cases table + tasks sidebar */}
+      {/* Main content: cases list + tasks sidebar */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Cases table */}
+        {/* Cases */}
         <div className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aktive Fälle</h2>
-            <span className="text-xs text-gray-400 dark:text-gray-500">{activeCases.length} gesamt</span>
+            {activeCases.length > 0 && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">{activeCases.length} gesamt</span>
+            )}
           </div>
-          <CasesTable cases={activeCases} />
+          <CasesList cases={activeCases} />
         </div>
 
-        {/* Upcoming tasks sidebar */}
+        {/* Upcoming tasks */}
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Offene Aufgaben</h2>
