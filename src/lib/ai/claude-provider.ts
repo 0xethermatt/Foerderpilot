@@ -107,7 +107,112 @@ const SYSTEM_PROMPT =
   'Du bist ein präziser Förderberater-Assistent für einen deutschen SHK-Fachbetrieb. ' +
   'Du garantierst keine Förderung und erfindest keine Daten. ' +
   'Rufe ausschließlich das bereitgestellte Tool auf – keinen Freitext ausgeben. ' +
-  'Alle Texte müssen auf Deutsch sein.';
+  'Alle Texte müssen auf Deutsch sein. ' +
+  'Die Heizungsförderung läuft über KfW / Meine KfW – NICHT über das BAFA-Portal. ' +
+  'BzA = Bestätigung zum Antrag. ' +
+  'Der Liefer-/Leistungsvertrag mit Fördervorbehalt muss VOR der Antragstellung vorliegen.';
+
+// ─── Output sanitizer ─────────────────────────────────────────────────────────
+// Lightweight post-processing guard: catches rule violations that slipped through
+// the prompt and either replaces them in text or flags them in internal_notes_de.
+// Does not fail valid results — adds transparent correction notes instead.
+
+interface SanitizeRule {
+  /** Pattern to detect in concatenated output text */
+  pattern: RegExp;
+  /** Short label added to internal_notes_de when triggered */
+  flag: string;
+  /** Optional: safe string replacement applied to every text field */
+  replace?: { from: RegExp; to: string };
+}
+
+const SANITIZE_RULES: SanitizeRule[] = [
+  {
+    pattern: /BAFA[- ]?Portal/i,
+    flag: '[Regelkorrektur] "BAFA-Portal" erkannt und ersetzt durch "KfW-Portal (Meine KfW)".',
+    replace: { from: /BAFA[- ]?Portal/gi, to: 'KfW-Portal (Meine KfW)' },
+  },
+  {
+    pattern: /Verwendungsnachweis\s+Antrag/i,
+    flag: '[Regelkorrektur] Falsche BzA-Definition erkannt. BzA = "Bestätigung zum Antrag".',
+    replace: {
+      from: /Bestätigung zum Verwendungsnachweis Antrag/gi,
+      to: 'Bestätigung zum Antrag (BzA)',
+    },
+  },
+  {
+    // Detects "Vertrag erst nach Antrag" / "Vertrag nach Antragstellung"
+    pattern: /[Vv]ertrag\s+(?:erst\s+)?nach\s+(?:der\s+)?[Aa]ntrag/,
+    flag:
+      '[Regelkorrektur] Falsche Vertragsreihenfolge erkannt. ' +
+      'Liefer-/Leistungsvertrag mit Fördervorbehalt muss VOR der Antragstellung vorliegen.',
+  },
+];
+
+function applyTextReplace(text: string, rule: SanitizeRule): string {
+  if (!rule.replace) return text;
+  return text.replace(rule.replace.from, rule.replace.to);
+}
+
+function sanitizeStrings(
+  texts: string[],
+  rules: SanitizeRule[],
+): string[] {
+  return texts.map((t) =>
+    rules.reduce((s, rule) => applyTextReplace(s, rule), t),
+  );
+}
+
+function sanitizeResult(result: FundingPrecheckResult): FundingPrecheckResult {
+  // Build a single string of all output text for pattern matching
+  const allText = [
+    result.summary_de,
+    result.customer_message_draft_de,
+    ...result.missing_information,
+    ...result.blocking_items,
+    ...result.recommended_next_steps,
+    ...result.internal_notes_de,
+    ...result.detected_risks.map((r) => `${r.risk_de} ${r.recommended_action_de}`),
+    ...result.possible_bonuses.map((b) => b.reason_de),
+  ].join(' ');
+
+  const triggeredFlags: string[] = [];
+  for (const rule of SANITIZE_RULES) {
+    if (rule.pattern.test(allText)) {
+      triggeredFlags.push(rule.flag);
+    }
+  }
+
+  if (triggeredFlags.length === 0) return result;
+
+  console.warn('[ClaudeProvider] Sanitizer triggered:', triggeredFlags);
+
+  // Apply text replacements to all free-text fields
+  const applyAll = (s: string) =>
+    SANITIZE_RULES.reduce((t, rule) => applyTextReplace(t, rule), s);
+
+  return {
+    ...result,
+    summary_de: applyAll(result.summary_de),
+    customer_message_draft_de: applyAll(result.customer_message_draft_de),
+    missing_information: sanitizeStrings(result.missing_information, SANITIZE_RULES),
+    blocking_items: sanitizeStrings(result.blocking_items, SANITIZE_RULES),
+    recommended_next_steps: sanitizeStrings(result.recommended_next_steps, SANITIZE_RULES),
+    detected_risks: result.detected_risks.map((r) => ({
+      ...r,
+      risk_de: applyAll(r.risk_de),
+      recommended_action_de: applyAll(r.recommended_action_de),
+    })),
+    possible_bonuses: result.possible_bonuses.map((b) => ({
+      ...b,
+      reason_de: applyAll(b.reason_de),
+    })),
+    internal_notes_de: [
+      ...result.internal_notes_de,
+      ...triggeredFlags,
+    ],
+  };
+}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -171,6 +276,7 @@ export class ClaudeProvider implements AIReasoningProvider {
       );
     }
 
-    return FundingPrecheckResultSchema.parse(toolBlock.input);
+    const validated = FundingPrecheckResultSchema.parse(toolBlock.input);
+    return sanitizeResult(validated);
   }
 }
