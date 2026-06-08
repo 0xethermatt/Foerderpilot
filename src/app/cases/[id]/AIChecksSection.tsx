@@ -129,12 +129,12 @@ function EntscheidungBox({
   riskCfg: { label: string; cls: string } | null;
 }) {
   const hauptgrund =
-    result.blocking_items[0] ??
-    result.detected_risks[0]?.risk_de ??
-    result.missing_information[0] ??
+    result.blocking_items?.[0] ??
+    result.detected_risks?.[0]?.risk_de ??
+    result.missing_information?.[0] ??
     null;
 
-  const naechsterSchritt = result.recommended_next_steps[0] ?? null;
+  const naechsterSchritt = result.recommended_next_steps?.[0] ?? null;
 
   return (
     <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
@@ -184,6 +184,23 @@ function EntscheidungBox({
   );
 }
 
+// ─── Runtime shape guard ──────────────────────────────────────────────────────
+// Old rows pre-dating the tool-use implementation may have result_json with
+// null arrays or missing fields. Validate before trusting the cast.
+
+function isValidResult(x: unknown): x is FundingPrecheckResult {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+  return (
+    Array.isArray(r.missing_information) &&
+    Array.isArray(r.blocking_items) &&
+    Array.isArray(r.possible_bonuses) &&
+    Array.isArray(r.detected_risks) &&
+    Array.isArray(r.recommended_next_steps) &&
+    Array.isArray(r.internal_notes_de)
+  );
+}
+
 // ─── Single check card ────────────────────────────────────────────────────────
 
 function AICheckCard({
@@ -199,9 +216,10 @@ function AICheckCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
 
-  const result = check.status === 'completed'
-    ? (check.result_json as unknown as FundingPrecheckResult)
-    : null;
+  const result =
+    check.status === 'completed' && isValidResult(check.result_json)
+      ? (check.result_json as unknown as FundingPrecheckResult)
+      : null;
 
   const reviewCfg = REVIEW_CONFIG[check.human_review_status as keyof typeof REVIEW_CONFIG]
     ?? REVIEW_CONFIG.pending;
