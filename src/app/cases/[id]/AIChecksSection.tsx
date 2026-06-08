@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { useState } from 'react';
-import { Bot, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, Info, ShieldAlert } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, Info, ShieldAlert, ArrowRight } from 'lucide-react';
 import {
   runFundingPrecheckAction,
   markAICheckApprovedAction,
@@ -117,6 +117,73 @@ function ReviewButtons({ checkId, caseId }: { checkId: string; caseId: string })
   );
 }
 
+// ─── Entscheidung summary box ─────────────────────────────────────────────────
+
+function EntscheidungBox({
+  result,
+  assessmentCfg,
+  riskCfg,
+}: {
+  result: FundingPrecheckResult;
+  assessmentCfg: { label: string; cls: string } | null;
+  riskCfg: { label: string; cls: string } | null;
+}) {
+  const hauptgrund =
+    result.blocking_items[0] ??
+    result.detected_risks[0]?.risk_de ??
+    result.missing_information[0] ??
+    null;
+
+  const naechsterSchritt = result.recommended_next_steps[0] ?? null;
+
+  return (
+    <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2.5">
+      {/* Row 1: Ergebnis + Risiko */}
+      <div className="grid grid-cols-2 gap-x-4">
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+            Ergebnis
+          </p>
+          {assessmentCfg
+            ? <Badge label={assessmentCfg.label} cls={assessmentCfg.cls} />
+            : <span className="text-xs text-gray-400">–</span>}
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
+            Risiko
+          </p>
+          {riskCfg
+            ? <Badge label={riskCfg.label} cls={riskCfg.cls} />
+            : <span className="text-xs text-gray-400">–</span>}
+        </div>
+      </div>
+
+      {/* Row 2: Hauptgrund */}
+      {hauptgrund && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+            Hauptgrund
+          </p>
+          <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">{hauptgrund}</p>
+        </div>
+      )}
+
+      {/* Row 3: Nächster Schritt */}
+      {naechsterSchritt && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+            Nächster Schritt
+          </p>
+          <div className="flex items-start gap-1">
+            <ArrowRight className="mt-0.5 h-3 w-3 flex-shrink-0 text-gray-400 dark:text-gray-500" />
+            <p className="text-xs text-gray-800 dark:text-gray-200 leading-snug">{naechsterSchritt}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Single check card ────────────────────────────────────────────────────────
 
 function AICheckCard({
@@ -129,6 +196,7 @@ function AICheckCard({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
 
   const result = check.status === 'completed'
@@ -186,135 +254,160 @@ function AICheckCard({
 
           {result && (
             <>
-              {/* Summary */}
+              {/* Entscheidung summary box */}
+              <EntscheidungBox
+                result={result}
+                assessmentCfg={assessmentCfg}
+                riskCfg={riskCfg}
+              />
+
+              {/* Narrative summary */}
               {result.summary_de && (
-                <p className="text-sm text-gray-800 dark:text-gray-200">{result.summary_de}</p>
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {result.summary_de}
+                </p>
               )}
 
-              {/* Missing information */}
-              {result.missing_information.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                    Fehlende Informationen
-                  </p>
-                  <ul className="space-y-0.5">
-                    {result.missing_information.map((item, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                        <span className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Details toggle */}
+              <button
+                onClick={() => setDetailsOpen((v) => !v)}
+                className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              >
+                {detailsOpen
+                  ? <ChevronUp className="h-3.5 w-3.5" />
+                  : <ChevronDown className="h-3.5 w-3.5" />}
+                {detailsOpen ? 'Details ausblenden' : 'Details anzeigen'}
+              </button>
 
-              {/* Blocking items */}
-              {result.blocking_items.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
-                    Blockierende Punkte
-                  </p>
-                  <ul className="space-y-0.5">
-                    {result.blocking_items.map((item, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-400">
-                        <AlertTriangle className="mt-0.5 flex-shrink-0 h-3 w-3" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Possible bonuses */}
-              {result.possible_bonuses.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                    Mögliche Boni
-                  </p>
-                  <ul className="space-y-1">
-                    {result.possible_bonuses.map((b, i) => {
-                      const cfg = BONUS_STATUS_CONFIG[b.status] ?? BONUS_STATUS_CONFIG.unclear;
-                      return (
-                        <li key={i} className="text-xs">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">{b.name}</span>
-                          {' – '}
-                          <span className={cfg.cls}>{cfg.label}</span>
-                          <span className="text-gray-500 dark:text-gray-400"> · {b.reason_de}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Detected risks */}
-              {result.detected_risks.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                    Erkannte Risiken
-                  </p>
-                  <ul className="space-y-2">
-                    {result.detected_risks.map((r, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span
-                          className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${SEVERITY_DOT[r.severity] ?? 'bg-gray-300'}`}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs text-gray-800 dark:text-gray-200">{r.risk_de}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">{r.recommended_action_de}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Next steps */}
-              {result.recommended_next_steps.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                    Empfohlene nächste Schritte
-                  </p>
-                  <ol className="space-y-0.5 list-decimal list-inside">
-                    {result.recommended_next_steps.map((step, i) => (
-                      <li key={i} className="text-xs text-gray-700 dark:text-gray-300">{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {/* Customer message draft – collapsible */}
-              {result.customer_message_draft_de && (
-                <div>
-                  <button
-                    onClick={() => setEmailOpen((v) => !v)}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hover:text-gray-700 dark:hover:text-gray-200"
-                  >
-                    {emailOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    Kundenmail-Entwurf
-                  </button>
-                  {emailOpen && (
-                    <pre className="mt-1.5 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2.5 whitespace-pre-wrap font-sans leading-relaxed">
-                      {result.customer_message_draft_de}
-                    </pre>
+              {/* Collapsible detail sections */}
+              {detailsOpen && (
+                <div className="space-y-3 pt-1">
+                  {/* Missing information */}
+                  {result.missing_information.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Fehlende Informationen
+                      </p>
+                      <ul className="space-y-0.5">
+                        {result.missing_information.map((item, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                            <span className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-gray-400 dark:bg-gray-500" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </div>
-              )}
 
-              {/* Internal notes */}
-              {result.internal_notes_de.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                    Interne Hinweise
-                  </p>
-                  <ul className="space-y-0.5">
-                    {result.internal_notes_de.map((note, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                        <Info className="mt-0.5 flex-shrink-0 h-3 w-3 text-gray-400 dark:text-gray-500" />
-                        {note}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Blocking items */}
+                  {result.blocking_items.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">
+                        Blockierende Punkte
+                      </p>
+                      <ul className="space-y-0.5">
+                        {result.blocking_items.map((item, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-400">
+                            <AlertTriangle className="mt-0.5 flex-shrink-0 h-3 w-3" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Possible bonuses */}
+                  {result.possible_bonuses.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Mögliche Boni
+                      </p>
+                      <ul className="space-y-1">
+                        {result.possible_bonuses.map((b, i) => {
+                          const cfg = BONUS_STATUS_CONFIG[b.status] ?? BONUS_STATUS_CONFIG.unclear;
+                          return (
+                            <li key={i} className="text-xs">
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{b.name}</span>
+                              {' – '}
+                              <span className={cfg.cls}>{cfg.label}</span>
+                              <span className="text-gray-500 dark:text-gray-400"> · {b.reason_de}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Detected risks */}
+                  {result.detected_risks.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Erkannte Risiken
+                      </p>
+                      <ul className="space-y-2">
+                        {result.detected_risks.map((r, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span
+                              className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${SEVERITY_DOT[r.severity] ?? 'bg-gray-300'}`}
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-800 dark:text-gray-200">{r.risk_de}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-0.5">{r.recommended_action_de}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Next steps */}
+                  {result.recommended_next_steps.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Empfohlene nächste Schritte
+                      </p>
+                      <ol className="space-y-0.5 list-decimal list-inside">
+                        {result.recommended_next_steps.map((step, i) => (
+                          <li key={i} className="text-xs text-gray-700 dark:text-gray-300">{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Customer message draft – collapsible */}
+                  {result.customer_message_draft_de && (
+                    <div>
+                      <button
+                        onClick={() => setEmailOpen((v) => !v)}
+                        className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        {emailOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        Kundenmail-Entwurf
+                      </button>
+                      {emailOpen && (
+                        <pre className="mt-1.5 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2.5 whitespace-pre-wrap font-sans leading-relaxed">
+                          {result.customer_message_draft_de}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Internal notes */}
+                  {result.internal_notes_de.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                        Interne Hinweise
+                      </p>
+                      <ul className="space-y-0.5">
+                        {result.internal_notes_de.map((note, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <Info className="mt-0.5 flex-shrink-0 h-3 w-3 text-gray-400 dark:text-gray-500" />
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </>
