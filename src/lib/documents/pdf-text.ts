@@ -51,7 +51,6 @@ function ensureBrowserPolyfills() {
     g.Path2D = class Path2D {
       constructor(_d?: string | object) {}
       addPath(_p: unknown, _t?: unknown) {}
-      arc(_x=0,_y=0,_r=0,_s=0,_e=0,_ccw=false) {}
       closePath() {}
       lineTo(_x=0,_y=0) {}
       moveTo(_x=0,_y=0) {}
@@ -63,19 +62,11 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractionResul
   try {
     ensureBrowserPolyfills();
 
-    // Resolve the worker path so pdfjs-dist can load it without webpack bundling.
-    // require.resolve('pdf-parse') returns the entry point (index.cjs); the worker
-    // lives in the same directory as pdf.worker.mjs.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { join, dirname } = require('path') as typeof import('path');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const workerPath: string = join(dirname(require.resolve('pdf-parse')), 'pdf.worker.mjs');
-
     type TextResult = { text: string; pages: Array<{ num: number; text: string }> };
-    type PDFParseClass = new (opts: { data: Buffer; workerSrc?: string }) => { getText(): Promise<TextResult> };
+    type PDFParseClass = new (opts: { data: Buffer }) => { getText(): Promise<TextResult> };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PDFParse } = require('pdf-parse') as { PDFParse: PDFParseClass };
-    const parser = new PDFParse({ data: buffer, workerSrc: workerPath });
+    const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     const text = (result.text ?? '').trim();
     const pageCount = result.pages.length;
