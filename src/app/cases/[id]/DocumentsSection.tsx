@@ -2,12 +2,14 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { useEffect, useState } from 'react';
-import { FileText, Plus, ChevronUp, Download } from 'lucide-react';
+import { FileText, Plus, ChevronUp, Download, ScanSearch } from 'lucide-react';
 import {
   uploadCaseDocumentAction,
   updateDocumentStatusAction,
 } from './document-actions';
 import type { DocumentActionState, UpdateStatusState } from './document-actions';
+import { runContractCheckAction } from './contract-check-actions';
+import type { ContractCheckActionState } from './contract-check-actions';
 import {
   DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -195,6 +197,46 @@ function UploadSubmitButton() {
   );
 }
 
+// ─── Contract check button ────────────────────────────────────────────────────
+
+function ContractCheckSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="inline-flex items-center gap-1 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 transition-colors"
+    >
+      <ScanSearch className="h-3 w-3" />
+      {pending ? 'Vertrag wird geprüft…' : 'Vertrag prüfen'}
+    </button>
+  );
+}
+
+function ContractCheckForm({ documentId, caseId }: { documentId: string; caseId: string }) {
+  const [state, formAction] = useFormState<ContractCheckActionState, FormData>(
+    runContractCheckAction,
+    null,
+  );
+  return (
+    <div className="mt-1.5">
+      <form action={formAction}>
+        <input type="hidden" name="case_id" value={caseId} />
+        <input type="hidden" name="document_id" value={documentId} />
+        <ContractCheckSubmitButton />
+      </form>
+      {state?.success && (
+        <p className="mt-1 text-xs text-green-700 dark:text-green-400">
+          Vertragsprüfung gestartet – Ergebnis in KI-Prüfungen.
+        </p>
+      )}
+      {state?.error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{state.error}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Document item ────────────────────────────────────────────────────────────
 
 function DocumentItem({
@@ -251,6 +293,11 @@ function DocumentItem({
         caseId={caseId}
         currentStatus={doc.status}
       />
+
+      {doc.type === 'contract' &&
+        (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
+        <ContractCheckForm documentId={doc.id} caseId={caseId} />
+      )}
     </div>
   );
 }

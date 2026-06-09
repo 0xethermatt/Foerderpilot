@@ -1,7 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { AIReasoningProvider, FundingPrecheckInput, FundingPrecheckResult } from './types';
 import { FundingPrecheckResultSchema } from './types';
+import type { ContractCheckInput, ContractCheckResult } from './contract-check/types';
+import { ContractCheckResultSchema } from './contract-check/types';
 import { buildFundingPrecheckPrompt } from './prompts/funding-precheck';
+import { buildContractCheckPrompt } from './prompts/contract-check';
 
 // ─── Tool definition ───────────────────────────────────────────────────────────
 // Forces the model to return structured JSON via tool_use, which is immune to
@@ -214,6 +217,109 @@ function sanitizeResult(result: FundingPrecheckResult): FundingPrecheckResult {
   };
 }
 
+// ─── Contract check tool definition ──────────────────────────────────────────
+
+const CONTRACT_CHECK_TOOL: Anthropic.Tool = {
+  name: 'report_contract_check',
+  description:
+    'Gibt das strukturierte Ergebnis der KfW-Vertragsanalyse (Liefer-/Leistungsvertrag) zurück.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      overall_assessment: {
+        type: 'string',
+        enum: ['pass', 'needs_revision', 'critical'],
+      },
+      risk_level: {
+        type: 'string',
+        enum: ['green', 'yellow', 'red'],
+      },
+      summary_de: { type: 'string' },
+      detected_contract_type: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      contract_parties: {
+        type: 'object',
+        properties: {
+          customer_name: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          contractor_name: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          project_address: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+        },
+        required: ['customer_name', 'contractor_name', 'project_address'],
+      },
+      funding_reservation: {
+        type: 'object',
+        properties: {
+          present: { type: 'boolean' },
+          type: {
+            type: 'string',
+            enum: ['aufschiebend', 'aufloesend', 'both', 'unclear', 'missing'],
+          },
+          mentions_kfw_funding_approval: { type: 'boolean' },
+          relevant_excerpt_de: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['present', 'type', 'mentions_kfw_funding_approval', 'relevant_excerpt_de', 'assessment_de'],
+      },
+      premature_start_risk: {
+        type: 'object',
+        properties: {
+          detected: { type: 'boolean' },
+          severity: { type: 'string', enum: ['none', 'low', 'medium', 'high'] },
+          problematic_excerpt_de: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['detected', 'severity', 'problematic_excerpt_de', 'assessment_de'],
+      },
+      implementation_period: {
+        type: 'object',
+        properties: {
+          present: { type: 'boolean' },
+          excerpt_de: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['present', 'excerpt_de', 'assessment_de'],
+      },
+      missing_or_unclear_items: { type: 'array', items: { type: 'string' } },
+      critical_findings: { type: 'array', items: { type: 'string' } },
+      recommended_changes: { type: 'array', items: { type: 'string' } },
+      safe_clause_suggestion_de: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      recommended_next_steps: { type: 'array', items: { type: 'string' } },
+      customer_message_draft_de: { type: 'string' },
+      internal_notes_de: { type: 'array', items: { type: 'string' } },
+      confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+      human_review_required: { type: 'boolean' },
+    },
+    required: [
+      'overall_assessment',
+      'risk_level',
+      'summary_de',
+      'detected_contract_type',
+      'contract_parties',
+      'funding_reservation',
+      'premature_start_risk',
+      'implementation_period',
+      'missing_or_unclear_items',
+      'critical_findings',
+      'recommended_changes',
+      'safe_clause_suggestion_de',
+      'recommended_next_steps',
+      'customer_message_draft_de',
+      'internal_notes_de',
+      'confidence',
+      'human_review_required',
+    ],
+  },
+};
+
+const CONTRACT_CHECK_SYSTEM_PROMPT =
+  'Du bist ein präziser Förderberater-Assistent für einen deutschen SHK-Fachbetrieb. ' +
+  'Du prüfst Liefer-/Leistungsverträge auf KfW-Konformität anhand des extrahierten Vertragstexts. ' +
+  'Du garantierst keine Förderung und erfindest keine Vertragsklauseln. ' +
+  'Du zitierst ausschließlich Passagen, die tatsächlich im extrahierten Text vorkommen. ' +
+  'Rufe ausschließlich das bereitgestellte Tool auf – keinen Freitext ausgeben. ' +
+  'Alle Texte müssen auf Deutsch sein. ' +
+  'Die Heizungsförderung läuft über KfW / Meine KfW – NICHT über das BAFA-Portal. ' +
+  'human_review_required ist immer true.';
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export class ClaudeProvider implements AIReasoningProvider {
@@ -278,5 +384,58 @@ export class ClaudeProvider implements AIReasoningProvider {
 
     const validated = FundingPrecheckResultSchema.parse(toolBlock.input);
     return sanitizeResult(validated);
+  }
+
+  // ─── Contract check ──────────────────────────────────────────────────────────
+
+  async runContractCheck(input: ContractCheckInput): Promise<ContractCheckResult> {
+    const userPrompt = buildContractCheckPrompt(input);
+
+    try {
+      return await this.callContractCheckTool([{ role: 'user', content: userPrompt }]);
+    } catch (firstErr) {
+      console.error('[ClaudeProvider] Contract check first attempt failed:', firstErr);
+    }
+
+    try {
+      return await this.callContractCheckTool([
+        { role: 'user', content: userPrompt },
+        {
+          role: 'user' as const,
+          content:
+            'Bitte rufe jetzt das Tool report_contract_check mit vollständigen, gültigen Daten auf. ' +
+            'Nur das Tool – kein Freitext.',
+        },
+      ]);
+    } catch (retryErr) {
+      console.error('[ClaudeProvider] Contract check retry also failed:', retryErr);
+      throw retryErr;
+    }
+  }
+
+  private async callContractCheckTool(
+    messages: Anthropic.MessageParam[],
+  ): Promise<ContractCheckResult> {
+    const response = await this.client.messages.create({
+      model: this.modelName,
+      max_tokens: 3500,
+      system: CONTRACT_CHECK_SYSTEM_PROMPT,
+      tools: [CONTRACT_CHECK_TOOL],
+      tool_choice: { type: 'tool', name: 'report_contract_check' },
+      messages,
+    });
+
+    const toolBlock = response.content.find(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+    );
+
+    if (!toolBlock) {
+      throw new Error(
+        `No tool_use block in response. stop_reason=${response.stop_reason} ` +
+        `blocks=${response.content.map((b) => b.type).join(',')}`,
+      );
+    }
+
+    return ContractCheckResultSchema.parse(toolBlock.input);
   }
 }
