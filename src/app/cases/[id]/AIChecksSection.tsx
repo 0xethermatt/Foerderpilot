@@ -12,6 +12,7 @@ import type { AICheckActionState } from './ai-actions';
 import type { Database } from '@/lib/supabase/database.types';
 import type { FundingPrecheckResult } from '@/lib/ai/types';
 import type { ContractCheckResult } from '@/lib/ai/contract-check/types';
+import type { OfferCheckResult } from '@/lib/ai/offer-check/types';
 import type { ReadinessSummary } from '@/lib/documents/checklist';
 
 type AICheckRow = Database['public']['Tables']['ai_checks']['Row'];
@@ -28,6 +29,12 @@ const CONTRACT_ASSESSMENT_CONFIG = {
   pass:           { label: 'Fördervorbehalt plausibel', cls: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
   needs_revision: { label: 'Nachbesserung nötig',       cls: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
   critical:       { label: 'Kritisch',                  cls: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
+} as const;
+
+const OFFER_ASSESSMENT_CONFIG = {
+  pass:           { label: 'Angebot plausibel',   cls: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300' },
+  needs_revision: { label: 'Nachbesserung nötig', cls: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300' },
+  critical:       { label: 'Kritisch',            cls: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
 } as const;
 
 const RISK_CONFIG = {
@@ -903,6 +910,428 @@ function ContractCheckCard({
   );
 }
 
+// ─── Offer check helpers ──────────────────────────────────────────────────────
+
+function isValidOfferResult(x: unknown): x is OfferCheckResult {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+  return (
+    typeof r.overall_assessment === 'string' &&
+    typeof r.heat_pump === 'object' &&
+    r.heat_pump !== null &&
+    typeof r.costs === 'object' &&
+    r.costs !== null &&
+    typeof r.eligible_scope_indicators === 'object' &&
+    r.eligible_scope_indicators !== null &&
+    Array.isArray(r.recommended_next_steps)
+  );
+}
+
+function BoolIndicator({ value, trueLabel, falseLabel }: { value: boolean; trueLabel: string; falseLabel: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs">
+      {value
+        ? <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-green-600 dark:text-green-400" />
+        : <Info className="h-3.5 w-3.5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />}
+      <span className={value ? 'text-green-700 dark:text-green-400' : 'text-yellow-700 dark:text-yellow-500'}>
+        {value ? trueLabel : falseLabel}
+      </span>
+    </div>
+  );
+}
+
+function OfferCheckCard({
+  check,
+  caseId,
+  defaultOpen,
+}: {
+  check: AICheckRow;
+  caseId: string;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen]           = useState(defaultOpen);
+  const [detailsOpen, setDetails] = useState(false);
+  const [emailOpen, setEmail]     = useState(false);
+
+  const result = check.status === 'completed' && isValidOfferResult(check.result_json)
+    ? (check.result_json as unknown as OfferCheckResult)
+    : null;
+
+  const reviewCfg = REVIEW_CONFIG[check.human_review_status as keyof typeof REVIEW_CONFIG]
+    ?? REVIEW_CONFIG.pending;
+
+  const assessmentCfg = result
+    ? OFFER_ASSESSMENT_CONFIG[result.overall_assessment as keyof typeof OFFER_ASSESSMENT_CONFIG]
+    : null;
+
+  const riskCfg = check.risk_level
+    ? RISK_CONFIG[check.risk_level as keyof typeof RISK_CONFIG] ?? null
+    : null;
+
+  const isExtractionFailure =
+    check.status === 'failed' &&
+    typeof check.result_json === 'object' &&
+    check.result_json !== null &&
+    (check.result_json as Record<string, unknown>).extraction_failed === true;
+
+  return (
+    <div className="border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-start justify-between gap-2 px-3 py-2.5 text-left bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Angebotsprüfung</span>
+            {assessmentCfg && <Badge label={assessmentCfg.label} cls={assessmentCfg.cls} />}
+            {riskCfg        && <Badge label={riskCfg.label}       cls={riskCfg.cls}       />}
+            {check.confidence && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">{CONFIDENCE_LABEL[check.confidence]}</span>
+            )}
+            <Badge label={reviewCfg.label} cls={reviewCfg.cls} />
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {formatDate(check.created_at)} · {check.provider}/{check.model}
+          </p>
+        </div>
+        <span className="flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
+          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </span>
+      </button>
+
+      {/* Body */}
+      {open && (
+        <div className="px-3 pb-3 pt-2 space-y-3 text-sm bg-white dark:bg-gray-900">
+          {/* Extraction failure */}
+          {isExtractionFailure && (
+            <div className="rounded-md bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 px-3 py-2">
+              <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                PDF-Text nicht lesbar
+              </p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                Aus dem PDF konnte kein Text gelesen werden. Für gescannte PDFs wird später OCR benötigt.
+              </p>
+            </div>
+          )}
+
+          {/* Generic failure */}
+          {check.status === 'failed' && !isExtractionFailure && (
+            <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-3 py-2">
+              <p className="text-xs font-medium text-red-700 dark:text-red-300">Angebotsprüfung fehlgeschlagen</p>
+            </div>
+          )}
+
+          {result && (
+            <>
+              {/* Summary box */}
+              <div className="rounded-md bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-x-4">
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Ergebnis</p>
+                    {assessmentCfg
+                      ? <Badge label={assessmentCfg.label} cls={assessmentCfg.cls} />
+                      : <span className="text-xs text-gray-400">–</span>}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Risiko</p>
+                    {riskCfg
+                      ? <Badge label={riskCfg.label} cls={riskCfg.cls} />
+                      : <span className="text-xs text-gray-400">–</span>}
+                  </div>
+                </div>
+
+                {/* Wärmepumpe quick summary */}
+                <div>
+                  <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Wärmepumpe</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    {result.heat_pump.present
+                      ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      : <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400 flex-shrink-0" />}
+                    <span className={result.heat_pump.present ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
+                      {result.heat_pump.present ? 'Erkennbar' : 'Nicht erkennbar'}
+                    </span>
+                    {result.heat_pump.manufacturer && (
+                      <span className="text-gray-500 dark:text-gray-400">· {result.heat_pump.manufacturer}</span>
+                    )}
+                    {result.heat_pump.model && (
+                      <span className="text-gray-500 dark:text-gray-400">{result.heat_pump.model}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Narrative summary */}
+              {result.summary_de && (
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{result.summary_de}</p>
+              )}
+
+              {/* Details toggle */}
+              <button
+                onClick={() => setDetails((v) => !v)}
+                className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+              >
+                {detailsOpen
+                  ? <ChevronUp className="h-3.5 w-3.5" />
+                  : <ChevronDown className="h-3.5 w-3.5" />}
+                {detailsOpen ? 'Details ausblenden' : 'Details anzeigen'}
+              </button>
+
+              {detailsOpen && (
+                <div className="space-y-3 pt-1">
+                  {/* Wärmepumpe details */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Wärmepumpe – Details
+                    </p>
+                    <dl className="space-y-0.5 text-xs mb-1.5">
+                      {result.heat_pump.type && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">Art:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.heat_pump.type}</dd>
+                        </div>
+                      )}
+                      {result.heat_pump.manufacturer && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">Hersteller:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.heat_pump.manufacturer}</dd>
+                        </div>
+                      )}
+                      {result.heat_pump.model && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">Modell:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.heat_pump.model}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{result.heat_pump.assessment_de}</p>
+                  </div>
+
+                  {/* Kosten */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Kosten
+                    </p>
+                    <dl className="space-y-0.5 text-xs mb-1.5">
+                      {result.costs.net_amount && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">Netto:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.costs.net_amount}</dd>
+                        </div>
+                      )}
+                      {result.costs.gross_amount && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">Brutto:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.costs.gross_amount}</dd>
+                        </div>
+                      )}
+                      {result.costs.vat_rate && (
+                        <div className="flex gap-1">
+                          <dt className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">MwSt.:</dt>
+                          <dd className="text-gray-700 dark:text-gray-300">{result.costs.vat_rate}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{result.costs.assessment_de}</p>
+                  </div>
+
+                  {/* Förderrelevante Leistungsbestandteile */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Förderrelevante Leistungen
+                    </p>
+                    <div className="space-y-1 mb-1.5">
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.demolition_old_heating_present}
+                        trueLabel="Demontage Altanlage erkennbar"
+                        falseLabel="Demontage Altanlage fehlt/unklar"
+                      />
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.hydraulic_balancing_present}
+                        trueLabel="Hydraulischer Abgleich erkennbar"
+                        falseLabel="Hydraulischer Abgleich fehlt/unklar"
+                      />
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.commissioning_present}
+                        trueLabel="Inbetriebnahme erkennbar"
+                        falseLabel="Inbetriebnahme fehlt/unklar"
+                      />
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.electrical_work_present}
+                        trueLabel="Elektroarbeiten erkennbar"
+                        falseLabel="Elektroarbeiten nicht erkennbar"
+                      />
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.buffer_or_storage_present}
+                        trueLabel="Speicher/Puffer erkennbar"
+                        falseLabel="Speicher/Puffer nicht erkennbar"
+                      />
+                      <BoolIndicator
+                        value={result.eligible_scope_indicators.environmental_measures_present}
+                        trueLabel="Nebenarbeiten erkennbar"
+                        falseLabel="Nebenarbeiten nicht erkennbar"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{result.eligible_scope_indicators.assessment_de}</p>
+                  </div>
+
+                  {/* Ausführungszeitraum */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Ausführungszeitraum
+                    </p>
+                    <div className="flex items-center gap-1.5 text-xs mb-0.5">
+                      {result.implementation_period.present
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        : <Info className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />}
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {result.implementation_period.present ? 'Vorhanden' : 'Nicht erkennbar'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{result.implementation_period.assessment_de}</p>
+                    {result.implementation_period.excerpt_de && (
+                      <blockquote className="mt-1 border-l-2 border-gray-300 dark:border-gray-600 pl-2.5 text-xs text-gray-600 dark:text-gray-400 italic">
+                        {result.implementation_period.excerpt_de}
+                      </blockquote>
+                    )}
+                  </div>
+
+                  {/* Project parties */}
+                  {(result.project_parties.customer_name || result.project_parties.contractor_name || result.project_parties.project_address) && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Projektparteien</p>
+                      <dl className="space-y-0.5 text-xs">
+                        {result.project_parties.customer_name && (
+                          <div className="flex gap-1">
+                            <dt className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">Auftraggeber:</dt>
+                            <dd className="text-gray-700 dark:text-gray-300">{result.project_parties.customer_name}</dd>
+                          </div>
+                        )}
+                        {result.project_parties.contractor_name && (
+                          <div className="flex gap-1">
+                            <dt className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">Auftragnehmer:</dt>
+                            <dd className="text-gray-700 dark:text-gray-300">{result.project_parties.contractor_name}</dd>
+                          </div>
+                        )}
+                        {result.project_parties.project_address && (
+                          <div className="flex gap-1">
+                            <dt className="text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">Projektadresse:</dt>
+                            <dd className="text-gray-700 dark:text-gray-300">{result.project_parties.project_address}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+
+                  {/* Critical findings */}
+                  {result.critical_findings.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide mb-1">Kritische Befunde</p>
+                      <ul className="space-y-0.5">
+                        {result.critical_findings.map((f, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-red-700 dark:text-red-400">
+                            <AlertTriangle className="mt-0.5 flex-shrink-0 h-3 w-3" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Missing/unclear */}
+                  {result.missing_or_unclear_items.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Fehlend / unklar</p>
+                      <ul className="space-y-0.5">
+                        {result.missing_or_unclear_items.map((item, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                            <span className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Recommended changes */}
+                  {result.recommended_changes.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Empfohlene Änderungen</p>
+                      <ul className="space-y-0.5">
+                        {result.recommended_changes.map((c, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                            <ArrowRight className="mt-0.5 flex-shrink-0 h-3 w-3 text-gray-400 dark:text-gray-500" />
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Next steps */}
+                  {result.recommended_next_steps.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Nächste Schritte</p>
+                      <ol className="space-y-0.5 list-decimal list-inside">
+                        {result.recommended_next_steps.map((step, i) => (
+                          <li key={i} className="text-xs text-gray-700 dark:text-gray-300">{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Customer message draft */}
+                  {result.customer_message_draft_de && (
+                    <div>
+                      <button
+                        onClick={() => setEmail((v) => !v)}
+                        className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide hover:text-gray-700 dark:hover:text-gray-200"
+                      >
+                        {emailOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        Kundenmail-Entwurf
+                      </button>
+                      {emailOpen && (
+                        <pre className="mt-1.5 text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2.5 whitespace-pre-wrap font-sans leading-relaxed">
+                          {result.customer_message_draft_de}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Internal notes */}
+                  {result.internal_notes_de.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Interne Hinweise</p>
+                      <ul className="space-y-0.5">
+                        {result.internal_notes_de.map((note, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                            <Info className="mt-0.5 flex-shrink-0 h-3 w-3 text-gray-400 dark:text-gray-500" />
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Disclaimer */}
+          <p className="text-xs text-gray-400 dark:text-gray-500 italic border-t border-gray-100 dark:border-gray-800 pt-2">
+            {check.disclaimer || 'KI-Angebotsprüfung erfordert manuelle Prüfung. Keine Fördergarantie.'}
+          </p>
+
+          {/* Review buttons */}
+          {check.human_review_status === 'pending' && check.status === 'completed' && result && (
+            <ReviewButtons checkId={check.id} caseId={caseId} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Router: dispatch to right card type ──────────────────────────────────────
 
 function CheckCardRouter({
@@ -919,6 +1348,11 @@ function CheckCardRouter({
   if (check.check_type === 'contract_check') {
     return (
       <ContractCheckCard check={check} caseId={caseId} defaultOpen={defaultOpen} />
+    );
+  }
+  if (check.check_type === 'offer_check') {
+    return (
+      <OfferCheckCard check={check} caseId={caseId} defaultOpen={defaultOpen} />
     );
   }
   return (

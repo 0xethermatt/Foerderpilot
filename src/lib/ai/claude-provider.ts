@@ -3,8 +3,11 @@ import type { AIReasoningProvider, FundingPrecheckInput, FundingPrecheckResult }
 import { FundingPrecheckResultSchema } from './types';
 import type { ContractCheckInput, ContractCheckResult } from './contract-check/types';
 import { ContractCheckResultSchema } from './contract-check/types';
+import type { OfferCheckInput, OfferCheckResult } from './offer-check/types';
+import { OfferCheckResultSchema } from './offer-check/types';
 import { buildFundingPrecheckPrompt } from './prompts/funding-precheck';
 import { buildContractCheckPrompt } from './prompts/contract-check';
+import { buildOfferCheckPrompt } from './prompts/offer-check';
 
 // ─── Tool definition ───────────────────────────────────────────────────────────
 // Forces the model to return structured JSON via tool_use, which is immune to
@@ -320,6 +323,127 @@ const CONTRACT_CHECK_SYSTEM_PROMPT =
   'Die Heizungsförderung läuft über KfW / Meine KfW – NICHT über das BAFA-Portal. ' +
   'human_review_required ist immer true.';
 
+// ─── Offer check tool definition ─────────────────────────────────────────────
+
+const OFFER_CHECK_TOOL: Anthropic.Tool = {
+  name: 'report_offer_check',
+  description:
+    'Gibt das strukturierte Ergebnis der KfW-Angebotsprüfung (Wärmepumpe/Heizungsangebot) zurück.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      overall_assessment: {
+        type: 'string',
+        enum: ['pass', 'needs_revision', 'critical'],
+      },
+      risk_level: {
+        type: 'string',
+        enum: ['green', 'yellow', 'red'],
+      },
+      summary_de: { type: 'string' },
+      detected_document_type: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      project_parties: {
+        type: 'object',
+        properties: {
+          customer_name:    { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          contractor_name:  { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          project_address:  { anyOf: [{ type: 'string' }, { type: 'null' }] },
+        },
+        required: ['customer_name', 'contractor_name', 'project_address'],
+      },
+      heat_pump: {
+        type: 'object',
+        properties: {
+          present:       { type: 'boolean' },
+          manufacturer:  { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          model:         { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          type:          { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['present', 'manufacturer', 'model', 'type', 'assessment_de'],
+      },
+      costs: {
+        type: 'object',
+        properties: {
+          net_amount:    { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          gross_amount:  { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          vat_rate:      { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['net_amount', 'gross_amount', 'vat_rate', 'assessment_de'],
+      },
+      eligible_scope_indicators: {
+        type: 'object',
+        properties: {
+          demolition_old_heating_present: { type: 'boolean' },
+          hydraulic_balancing_present:    { type: 'boolean' },
+          commissioning_present:          { type: 'boolean' },
+          electrical_work_present:        { type: 'boolean' },
+          buffer_or_storage_present:      { type: 'boolean' },
+          environmental_measures_present: { type: 'boolean' },
+          assessment_de:                  { type: 'string' },
+        },
+        required: [
+          'demolition_old_heating_present',
+          'hydraulic_balancing_present',
+          'commissioning_present',
+          'electrical_work_present',
+          'buffer_or_storage_present',
+          'environmental_measures_present',
+          'assessment_de',
+        ],
+      },
+      implementation_period: {
+        type: 'object',
+        properties: {
+          present:       { type: 'boolean' },
+          excerpt_de:    { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          assessment_de: { type: 'string' },
+        },
+        required: ['present', 'excerpt_de', 'assessment_de'],
+      },
+      missing_or_unclear_items:  { type: 'array', items: { type: 'string' } },
+      critical_findings:         { type: 'array', items: { type: 'string' } },
+      recommended_changes:       { type: 'array', items: { type: 'string' } },
+      recommended_next_steps:    { type: 'array', items: { type: 'string' } },
+      customer_message_draft_de: { type: 'string' },
+      internal_notes_de:         { type: 'array', items: { type: 'string' } },
+      confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+      human_review_required: { type: 'boolean' },
+    },
+    required: [
+      'overall_assessment',
+      'risk_level',
+      'summary_de',
+      'detected_document_type',
+      'project_parties',
+      'heat_pump',
+      'costs',
+      'eligible_scope_indicators',
+      'implementation_period',
+      'missing_or_unclear_items',
+      'critical_findings',
+      'recommended_changes',
+      'recommended_next_steps',
+      'customer_message_draft_de',
+      'internal_notes_de',
+      'confidence',
+      'human_review_required',
+    ],
+  },
+};
+
+const OFFER_CHECK_SYSTEM_PROMPT =
+  'Du bist ein präziser Förderberater-Assistent für einen deutschen SHK-Fachbetrieb. ' +
+  'Du prüfst Angebote für Wärmepumpeninstallationen auf Vollständigkeit und Plausibilität ' +
+  'im Hinblick auf die KfW-Heizungsförderung (KfW 458). ' +
+  'Du garantierst keine Förderung und erfindest keine Angaben. ' +
+  'Du zitierst ausschließlich Passagen, die tatsächlich im extrahierten Angebotstext vorkommen. ' +
+  'Rufe ausschließlich das bereitgestellte Tool auf – keinen Freitext ausgeben. ' +
+  'Alle Texte müssen auf Deutsch sein. ' +
+  'Die Heizungsförderung läuft über KfW / Meine KfW – NICHT über das BAFA-Portal. ' +
+  'human_review_required ist immer true.';
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export class ClaudeProvider implements AIReasoningProvider {
@@ -437,5 +561,58 @@ export class ClaudeProvider implements AIReasoningProvider {
     }
 
     return ContractCheckResultSchema.parse(toolBlock.input);
+  }
+
+  // ─── Offer check ─────────────────────────────────────────────────────────────
+
+  async runOfferCheck(input: OfferCheckInput): Promise<OfferCheckResult> {
+    const userPrompt = buildOfferCheckPrompt(input);
+
+    try {
+      return await this.callOfferCheckTool([{ role: 'user', content: userPrompt }]);
+    } catch (firstErr) {
+      console.error('[ClaudeProvider] Offer check first attempt failed:', firstErr);
+    }
+
+    try {
+      return await this.callOfferCheckTool([
+        { role: 'user', content: userPrompt },
+        {
+          role: 'user' as const,
+          content:
+            'Bitte rufe jetzt das Tool report_offer_check mit vollständigen, gültigen Daten auf. ' +
+            'Nur das Tool – kein Freitext.',
+        },
+      ]);
+    } catch (retryErr) {
+      console.error('[ClaudeProvider] Offer check retry also failed:', retryErr);
+      throw retryErr;
+    }
+  }
+
+  private async callOfferCheckTool(
+    messages: Anthropic.MessageParam[],
+  ): Promise<OfferCheckResult> {
+    const response = await this.client.messages.create({
+      model: this.modelName,
+      max_tokens: 3500,
+      system: OFFER_CHECK_SYSTEM_PROMPT,
+      tools: [OFFER_CHECK_TOOL],
+      tool_choice: { type: 'tool', name: 'report_offer_check' },
+      messages,
+    });
+
+    const toolBlock = response.content.find(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+    );
+
+    if (!toolBlock) {
+      throw new Error(
+        `No tool_use block in response. stop_reason=${response.stop_reason} ` +
+        `blocks=${response.content.map((b) => b.type).join(',')}`,
+      );
+    }
+
+    return OfferCheckResultSchema.parse(toolBlock.input);
   }
 }

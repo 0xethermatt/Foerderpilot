@@ -10,6 +10,8 @@ import {
 import type { DocumentActionState, UpdateStatusState } from './document-actions';
 import { runContractCheckAction } from './contract-check-actions';
 import type { ContractCheckActionState } from './contract-check-actions';
+import { runOfferCheckAction } from './offer-check-actions';
+import type { OfferCheckActionState } from './offer-check-actions';
 import {
   DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -237,6 +239,46 @@ function ContractCheckForm({ documentId, caseId }: { documentId: string; caseId:
   );
 }
 
+// ─── Offer check button ───────────────────────────────────────────────────────
+
+function OfferCheckSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="inline-flex items-center gap-1 rounded border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 disabled:opacity-50 transition-colors"
+    >
+      <ScanSearch className="h-3 w-3" />
+      {pending ? 'Angebot wird geprüft…' : 'Angebot prüfen'}
+    </button>
+  );
+}
+
+function OfferCheckForm({ documentId, caseId }: { documentId: string; caseId: string }) {
+  const [state, formAction] = useFormState<OfferCheckActionState, FormData>(
+    runOfferCheckAction,
+    null,
+  );
+  return (
+    <div className="mt-1.5">
+      <form action={formAction}>
+        <input type="hidden" name="case_id" value={caseId} />
+        <input type="hidden" name="document_id" value={documentId} />
+        <OfferCheckSubmitButton />
+      </form>
+      {state?.success && (
+        <p className="mt-1 text-xs text-green-700 dark:text-green-400">
+          Angebotsprüfung gestartet – Ergebnis in KI-Prüfungen.
+        </p>
+      )}
+      {state?.error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{state.error}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Document item ────────────────────────────────────────────────────────────
 
 function DocumentItem({
@@ -297,6 +339,10 @@ function DocumentItem({
       {doc.type === 'contract' &&
         (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
         <ContractCheckForm documentId={doc.id} caseId={caseId} />
+      )}
+      {doc.type === 'offer' &&
+        (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
+        <OfferCheckForm documentId={doc.id} caseId={caseId} />
       )}
     </div>
   );
