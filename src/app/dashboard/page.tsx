@@ -67,6 +67,9 @@ function UpcomingTasks({
   tasks: TaskRow[];
   caseMap: Record<string, string>;
 }) {
+  const MOBILE_LIMIT = 5;
+  const extraCount = Math.max(0, tasks.length - MOBILE_LIMIT);
+
   if (tasks.length === 0) {
     return (
       <div className="py-4 text-center">
@@ -78,26 +81,30 @@ function UpcomingTasks({
     );
   }
   return (
-    <ul className="space-y-3">
-      {tasks.map((t) => {
-        const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
-        return (
-          <li key={t.id} className="flex items-start gap-2.5">
-            <span
-              className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[t.priority] ?? 'bg-gray-300'}`}
-            />
-            <div className="min-w-0">
-              <Link
-                href={`/cases/${t.funding_case_id}`}
-                className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:underline line-clamp-1"
-              >
-                {t.title}
-              </Link>
-              {caseMap[t.funding_case_id] && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
-                  {caseMap[t.funding_case_id]}
-                </p>
-              )}
+    <div>
+      <ul className="space-y-3">
+        {tasks.map((t, idx) => {
+          const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
+          return (
+            <li
+              key={t.id}
+              className={`items-start gap-2.5 ${idx >= MOBILE_LIMIT ? 'hidden sm:flex' : 'flex'}`}
+            >
+              <span
+                className={`mt-1.5 flex-shrink-0 h-2 w-2 rounded-full ${PRIORITY_DOT[t.priority] ?? 'bg-gray-300'}`}
+              />
+              <div className="min-w-0">
+                <Link
+                  href={`/cases/${t.funding_case_id}`}
+                  className="text-sm text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:underline line-clamp-1"
+                >
+                  {t.title}
+                </Link>
+                {caseMap[t.funding_case_id] && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
+                    {caseMap[t.funding_case_id]}
+                  </p>
+                )}
               {t.due_date && (
                 <p className={`text-xs mt-0.5 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
                   {overdue ? 'Überfällig · ' : 'Fällig · '}
@@ -109,10 +116,16 @@ function UpcomingTasks({
                 </p>
               )}
             </div>
-          </li>
-        );
-      })}
-    </ul>
+            </li>
+          );
+        })}
+      </ul>
+      {extraCount > 0 && (
+        <p className="sm:hidden mt-3 text-xs text-gray-400 dark:text-gray-500">
+          + {extraCount} weitere
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -229,7 +242,7 @@ function CasesList({ cases }: { cases: DashboardCase[] }) {
       </div>
 
       {/* Rows */}
-      <div className="-mx-6 sm:mx-0 divide-y divide-gray-50 dark:divide-gray-800 sm:divide-gray-100">
+      <div className="-mx-4 sm:mx-0 divide-y divide-gray-50 dark:divide-gray-800 sm:divide-gray-100">
         {cases.map((c) => (
           <CaseRow key={c.id} c={c} />
         ))}
@@ -310,7 +323,7 @@ export default async function DashboardPage() {
   const completedCases = enrichedCases.filter((c) => c.status === 'completed');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
       {/* Page title — no duplicate CTA, nav already has it */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Übersicht</h1>
@@ -320,7 +333,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Aktive Fälle"    value={activeCases.length}    icon={Folder}       accent="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400" />
         <StatCard label="Kritische Fälle" value={criticalCases.length}  icon={AlertTriangle} accent="bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400" />
         <StatCard label="Offene Aufgaben" value={totalOpenTasks}         icon={ClipboardList} accent="bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400" />
@@ -328,10 +341,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main content: cases list + tasks sidebar */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
         {/* Cases */}
-        <div className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-5">
+        <div className="xl:col-span-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Aktive Fälle</h2>
             {activeCases.length > 0 && (
               <span className="text-xs text-gray-400 dark:text-gray-500">{activeCases.length} gesamt</span>
@@ -341,8 +354,8 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming tasks */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-5">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Offene Aufgaben</h2>
             {upcomingTasks.length > 0 && (
               <span className="text-xs text-gray-400 dark:text-gray-500">{upcomingTasks.length} gesamt</span>

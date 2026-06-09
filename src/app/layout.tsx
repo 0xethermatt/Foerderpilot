@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -7,6 +7,12 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Förderpilot',
   description: 'Interne Verwaltung von Wärmepumpen-Förderanträgen',
+};
+
+// viewportFit=cover is required for env(safe-area-inset-bottom) to return
+// non-zero values on iPhone — without it the safe-area is always 0.
+export const viewport: Viewport = {
+  viewportFit: 'cover',
 };
 
 // Inline script runs before React hydration to prevent dark-mode flash.
@@ -30,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="min-h-screen flex flex-col">
           <header className="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-800 backdrop-blur-sm">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex h-14 items-center justify-between gap-4">
+              <div className="flex h-12 sm:h-14 items-center justify-between gap-4">
                 {/* Brand */}
                 <div className="flex items-center gap-3">
                   <Link href="/dashboard" className="flex items-center gap-2.5 group">
@@ -65,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-[calc(env(safe-area-inset-bottom)+3rem)] sm:pb-8">
             {children}
           </main>
 

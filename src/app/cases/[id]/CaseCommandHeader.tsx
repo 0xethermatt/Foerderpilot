@@ -89,13 +89,13 @@ export default function CaseCommandHeader({
       </Link>
 
       {/* Command card */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4 sm:p-5">
         {/* Title + badges */}
-        <div className="flex flex-wrap items-start gap-3 mb-3">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0">
+        <div className="flex flex-wrap items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
+          <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0">
             {fundingCase.title}
           </h1>
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
             <StatusBadge status={fundingCase.status as FundingCaseStatus} />
             <RiskBadge risk={fundingCase.risk_level as RiskLevel} />
             <ReadinessBadge readiness={readiness} />
@@ -103,7 +103,7 @@ export default function CaseCommandHeader({
         </div>
 
         {/* Meta row */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-4">
+        <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
           {customer && (
             <span>{customer.first_name} {customer.last_name}</span>
           )}
@@ -120,7 +120,7 @@ export default function CaseCommandHeader({
         </div>
 
         {/* Next action banner */}
-        <div className="flex flex-wrap items-center gap-2 mb-5 px-3 py-2.5 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60">
+        <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-5 px-3 py-2 sm:py-2.5 rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60">
           <p className="text-xs font-medium text-gray-400 dark:text-gray-500 flex-shrink-0 uppercase tracking-wide">
             Nächste Aktion
           </p>
@@ -128,7 +128,7 @@ export default function CaseCommandHeader({
         </div>
 
         {/* Quick actions */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           <a
             href="#tasks"
             className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
