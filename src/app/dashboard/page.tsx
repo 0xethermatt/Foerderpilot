@@ -40,13 +40,13 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5 flex items-center gap-4">
-      <div className={`flex-shrink-0 rounded-lg p-2.5 ${accent}`}>
-        <Icon className="h-5 w-5" />
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-3 sm:p-5 flex items-center gap-2.5 sm:gap-4">
+      <div className={`flex-shrink-0 rounded-lg p-2 sm:p-2.5 ${accent}`}>
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
       </div>
-      <div>
-        <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{value}</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
+      <div className="min-w-0">
+        <p className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 leading-tight">{value}</p>
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{label}</p>
       </div>
     </div>
   );
