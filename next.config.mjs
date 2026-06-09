@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Force Vercel's file tracer to include pdf-parse's bundled worker file,
+  // which is dynamically loaded at runtime but not statically imported.
+  outputFileTracingIncludes: {
+    '/cases/[id]': ['./node_modules/pdf-parse/dist/**/*'],
+  },
   experimental: {
     serverActions: {
       // Default is 1mb which would reject uploads before they reach our

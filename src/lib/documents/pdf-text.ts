@@ -5,18 +5,14 @@ export interface PdfExtractionResult {
   error?: string;
 }
 
-// pdfjs-dist (used by pdf-parse) references browser geometry APIs that Node.js
-// does not expose as globals. Stub them before the first require().
+// pdfjs-dist (bundled inside pdf-parse) references browser geometry APIs that
+// Node.js does not expose as globals. Stub them before the first require().
 function ensureBrowserPolyfills() {
   const g = globalThis as Record<string, unknown>;
 
   if (!g.DOMMatrix) {
     g.DOMMatrix = class DOMMatrix {
       a=1; b=0; c=0; d=1; e=0; f=0;
-      m11=1; m12=0; m13=0; m14=0;
-      m21=0; m22=1; m23=0; m24=0;
-      m31=0; m32=0; m33=1; m34=0;
-      m41=0; m42=0; m43=0; m44=1;
       is2D=true; isIdentity=true;
       constructor(_init?: string | number[]) {}
       multiply(_m?: unknown) { return this; }
@@ -26,8 +22,6 @@ function ensureBrowserPolyfills() {
       inverse() { return this; }
       transformPoint(p: {x?:number;y?:number}) { return { x: p?.x??0, y: p?.y??0, z:0, w:1 }; }
       static fromMatrix(_m?: unknown) { return new (g.DOMMatrix as new()=>object)(); }
-      static fromFloat32Array(_a: Float32Array) { return new (g.DOMMatrix as new()=>object)(); }
-      static fromFloat64Array(_a: Float64Array) { return new (g.DOMMatrix as new()=>object)(); }
     };
   }
 
@@ -35,7 +29,9 @@ function ensureBrowserPolyfills() {
     g.DOMPoint = class DOMPoint {
       x=0; y=0; z=0; w=1;
       constructor(x=0, y=0, z=0, w=1) { this.x=x; this.y=y; this.z=z; this.w=w; }
-      static fromPoint(p?: {x?:number;y?:number}) { return new (g.DOMPoint as new(x?:number,y?:number)=>object)(p?.x,p?.y); }
+      static fromPoint(p?: {x?:number;y?:number}) {
+        return new (g.DOMPoint as new(x?:number,y?:number)=>object)(p?.x, p?.y);
+      }
       matrixTransform(_m?: unknown) { return this; }
     };
   }
@@ -48,10 +44,6 @@ function ensureBrowserPolyfills() {
       get bottom() { return this.y + this.height; }
       get right() { return this.x + this.width; }
       constructor(x=0, y=0, w=0, h=0) { this.x=x; this.y=y; this.width=w; this.height=h; }
-      static fromRect(r?: {x?:number;y?:number;width?:number;height?:number}) {
-        return new (g.DOMRect as new(x?:number,y?:number,w?:number,h?:number)=>object)(r?.x,r?.y,r?.width,r?.height);
-      }
-      toJSON() { return {x:this.x,y:this.y,width:this.width,height:this.height}; }
     };
   }
 
@@ -71,11 +63,19 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractionResul
   try {
     ensureBrowserPolyfills();
 
+    // Resolve the worker path so pdfjs-dist can load it without webpack bundling.
+    // require.resolve('pdf-parse') returns the entry point (index.cjs); the worker
+    // lives in the same directory as pdf.worker.mjs.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { join, dirname } = require('path') as typeof import('path');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const workerPath: string = join(dirname(require.resolve('pdf-parse')), 'pdf.worker.mjs');
+
     type TextResult = { text: string; pages: Array<{ num: number; text: string }> };
-    type PDFParseClass = new (opts: { data: Buffer }) => { getText(): Promise<TextResult> };
+    type PDFParseClass = new (opts: { data: Buffer; workerSrc?: string }) => { getText(): Promise<TextResult> };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PDFParse } = require('pdf-parse') as { PDFParse: PDFParseClass };
-    const parser = new PDFParse({ data: buffer });
+    const parser = new PDFParse({ data: buffer, workerSrc: workerPath });
     const result = await parser.getText();
     const text = (result.text ?? '').trim();
     const pageCount = result.pages.length;
