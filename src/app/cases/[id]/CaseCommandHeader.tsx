@@ -90,12 +90,12 @@ export default function CaseCommandHeader({
 
       {/* Command card */}
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4 sm:p-5">
-        {/* Title + badges */}
+        {/* Title + badges — title is full-width on mobile, side-by-side on sm+ */}
         <div className="flex flex-wrap items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
-          <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 flex-1 min-w-0">
+          <h1 className="w-full sm:flex-1 text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
             {fundingCase.title}
           </h1>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <StatusBadge status={fundingCase.status as FundingCaseStatus} />
             <RiskBadge risk={fundingCase.risk_level as RiskLevel} />
             <ReadinessBadge readiness={readiness} />
