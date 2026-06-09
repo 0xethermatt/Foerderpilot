@@ -12,7 +12,7 @@ export const CONTRACT_CHECK_SOURCES_USED = [
 export const CONTRACT_CHECK_DISCLAIMER =
   'Dieses KI-Ergebnis ist eine automatische Vertragsprüfung und stellt keine Rechts- oder ' +
   'Förderberatung dar. Eine Förderung kann nicht garantiert werden. Die manuelle Prüfung durch ' +
-  'einen qualifizierten Fachbetrieb ist zwingend erforderlich, bevor ein Antrag gestellt wird.';
+  'einen qualifizierten Fachbetrieb wird empfohlen, bevor ein Antrag gestellt wird.';
 
 const MAX_TEXT_CHARS = 20_000;
 
@@ -45,6 +45,15 @@ PFLICHTREGELN – NIEMALS VERLETZBAR
 7. Ist der extrahierte Text leer oder unvollständig, muss confidence auf "low" gesetzt werden und overall_assessment darf NICHT "pass" sein.
 8. Enthält der Text sofortige Ausführungsklauseln, MUSS overall_assessment "critical" und risk_level "red" sein.
 9. Fehlt der Fördervorbehalt, MUSS overall_assessment "needs_revision" oder "critical" sein.
+10. VERBOTENE FORMULIERUNGEN in allen nutzer-sichtbaren Texten (summary_de, customer_message_draft_de, internal_notes_de, recommended_changes_de):
+    – VERBOTEN: "würde zur Ablehnung führen", "führt zur Ablehnung", "wird abgelehnt"
+    – VERBOTEN: "zwingend erforderlich, um Förderung nicht zu gefährden"
+    – VERBOTEN: "zwingend notwendig" in absolutem Sinne
+    – ERLAUBT stattdessen: "kann die Förderfähigkeit gefährden", "stellt ein erhebliches Risiko dar",
+      "sollte vor Antragstellung fachlich korrigiert werden", "gefährdet die Förderfähigkeit"
+11. Dokument-Labels und Test-Vermerke im Text (z.B. "Testfall", "Testdokument", "Test") NICHT in der Zusammenfassung erwähnen.
+    Bewerte nur den fachlichen Vertragsinhalt, nicht die Metadaten oder Bezeichnung des Dokuments.
+    Statt "im Dokument explizit als Testfall vermerkt" → sachliche Beschreibung des Vertragsinhalts.
 
 ════════════════════════════════════════════════════════
 FÖRDERKONTEXT: KfW Heizungsförderung
@@ -157,6 +166,8 @@ Hinweise für Texte und Zitate:
 - Zitate kurz halten (max. 2–3 Sätze)
 - Nur tatsächlich im Text vorhandene Passagen zitieren
 - Fehlende Klauseln als fehlend beschreiben, nicht erfinden
+- Risiken als Möglichkeiten formulieren ("kann gefährden", "stellt ein Risiko dar"), nicht als Gewissheiten ("führt zur Ablehnung")
+- Dokument-Bezeichnungen oder Test-Vermerke aus dem Dateinamen oder PDF-Inhalt NICHT in die Zusammenfassung übernehmen
 
 Für customer_message_draft_de:
 - Freundlicher Ton, keine Rechtsberatung
