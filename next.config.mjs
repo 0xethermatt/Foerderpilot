@@ -6,6 +6,10 @@ const nextConfig = {
       // 15 MB validation. Set to 16mb to give a small headroom.
       bodySizeLimit: '16mb',
     },
+    // Keep pdf-parse and pdfjs-dist as native Node.js requires so Vercel
+    // doesn't bundle them — the worker file (pdf.worker.mjs) must stay
+    // resolvable relative to the package root at runtime.
+    serverComponentsExternalPackages: ['pdf-parse', 'pdfjs-dist'],
   },
 };
 
