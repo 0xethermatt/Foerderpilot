@@ -208,7 +208,7 @@ function ContractCheckSubmitButton() {
       className="inline-flex items-center gap-1 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 transition-colors"
     >
       <ScanSearch className="h-3 w-3" />
-      {pending ? 'Prüfung läuft…' : 'Vertrag prüfen'}
+      {pending ? 'Vertrag wird geprüft…' : 'Vertrag prüfen'}
     </button>
   );
 }
@@ -294,7 +294,8 @@ function DocumentItem({
         currentStatus={doc.status}
       />
 
-      {doc.type === 'contract' && (
+      {doc.type === 'contract' &&
+        (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
         <ContractCheckForm documentId={doc.id} caseId={caseId} />
       )}
     </div>
