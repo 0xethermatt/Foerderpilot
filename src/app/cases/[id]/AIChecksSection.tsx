@@ -1045,18 +1045,34 @@ function OfferCheckCard({
                 <div>
                   <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Wärmepumpe</p>
                   <div className="flex items-center gap-2 text-xs">
-                    {result.heat_pump.present
-                      ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                      : <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400 flex-shrink-0" />}
-                    <span className={result.heat_pump.present ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
-                      {result.heat_pump.present ? 'Erkennbar' : 'Nicht erkennbar'}
-                    </span>
-                    {result.heat_pump.manufacturer && (
-                      <span className="text-gray-500 dark:text-gray-400">· {result.heat_pump.manufacturer}</span>
-                    )}
-                    {result.heat_pump.model && (
-                      <span className="text-gray-500 dark:text-gray-400">{result.heat_pump.model}</span>
-                    )}
+                    {(() => {
+                      const hp = result.heat_pump;
+                      const hasDetails = hp.manufacturer || hp.model;
+                      if (!hp.present) {
+                        return (
+                          <>
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                            <span className="text-red-700 dark:text-red-400">Nicht erkennbar</span>
+                          </>
+                        );
+                      }
+                      if (!hasDetails) {
+                        return (
+                          <>
+                            <Info className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
+                            <span className="text-yellow-700 dark:text-yellow-500">Erkennbar, aber unvollständig</span>
+                          </>
+                        );
+                      }
+                      return (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          <span className="text-green-700 dark:text-green-400">Erkennbar</span>
+                          {hp.manufacturer && <span className="text-gray-500 dark:text-gray-400">· {hp.manufacturer}</span>}
+                          {hp.model && <span className="text-gray-500 dark:text-gray-400">{hp.model}</span>}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

@@ -83,12 +83,18 @@ PRÜFAUFGABEN
    – Projektadresse: Wo soll die Maßnahme durchgeführt werden?
 
 3. WÄRMEPUMPE (kritischster Prüfpunkt)
-   – Ist eine Wärmepumpe als Leistungsposition erkennbar?
+   – Ist eine Wärmepumpe als Maßnahme oder Leistungsposition erkennbar?
+     → heat_pump.present = true: wenn irgendeine Wärmepumpe erkennbar ist, auch ohne Hersteller/Modell
+       (z.B. "Wärmepumpe ca. 10 kW", "Luft/Wasser-Wärmepumpe", "WP-Anlage" zählen als present=true)
+     → heat_pump.present = false: NUR wenn KEINERLEI Wärmepumpenmaßnahme im Angebot erkennbar ist
    – Hersteller erkennbar? (z.B. Vaillant, Viessmann, Daikin, Stiebel Eltron, Bosch, NIBE, Wolf, etc.)
+     → Wenn nicht erkennbar: manufacturer = null UND in missing_or_unclear_items aufnehmen
    – Modell / Typenbezeichnung erkennbar?
+     → Wenn nicht erkennbar: model = null UND in missing_or_unclear_items aufnehmen
    – Art der Wärmepumpe erkennbar? (Luft/Wasser, Sole/Wasser, Wasser/Wasser, Monoblock, Split, etc.)
    – Kurze Beschreibung der Einschätzung auf Deutsch
-   – Wenn keine Wärmepumpe erkennbar: overall_assessment MUSS "critical" sein
+   – WICHTIG: Fehlende Hersteller/Modell-Angaben → missing_or_unclear_items, NICHT heat_pump.present=false
+   – Wenn keine Wärmepumpe erkennbar (present=false): overall_assessment MUSS "critical" sein
 
 4. KOSTEN
    – Nettobetrag erkennbar?
