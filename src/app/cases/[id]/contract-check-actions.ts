@@ -100,6 +100,8 @@ export async function runContractCheckAction(
   let status: 'completed' | 'failed'               = 'completed';
   let aiError: string | undefined;
 
+  const checkMeta = { document_id: documentId, document_type: 'contract' as const };
+
   if (extraction.extraction_status === 'empty') {
     // Store a low-confidence completed result rather than a hard failure
     resultJson = {
@@ -107,6 +109,7 @@ export async function runContractCheckAction(
       extraction_status: 'empty',
       message_de:
         'Aus dem PDF konnte kein Text gelesen werden. Für gescannte PDFs wird später OCR benötigt.',
+      meta: checkMeta,
     } as unknown as Json;
     confidence = 'low';
     status     = 'failed';
@@ -117,6 +120,7 @@ export async function runContractCheckAction(
       extraction_failed: true,
       extraction_status: 'failed',
       error: extraction.error ?? 'PDF-Extraktion fehlgeschlagen',
+      meta: checkMeta,
     } as unknown as Json;
     confidence = 'low';
     status     = 'failed';
@@ -137,7 +141,7 @@ export async function runContractCheckAction(
 
     try {
       const result = await provider.runContractCheck(input);
-      resultJson = result as unknown as Json;
+      resultJson = { ...(result as object), meta: checkMeta } as unknown as Json;
       summary    = result.summary_de;
       riskLevel  = result.risk_level;
       confidence = result.confidence;
@@ -150,7 +154,7 @@ export async function runContractCheckAction(
         ? 'KI-Antwort hatte ein unerwartetes Format. Bitte erneut versuchen.'
         : raw;
       console.error('[ContractCheck] AI failed:', raw);
-      resultJson = { error: aiError } as unknown as Json;
+      resultJson = { error: aiError, meta: checkMeta } as unknown as Json;
     }
   }
 
