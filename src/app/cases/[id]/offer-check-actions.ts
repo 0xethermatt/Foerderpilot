@@ -138,8 +138,13 @@ export async function runOfferCheckAction(
       riskLevel  = result.risk_level;
       confidence = result.confidence;
     } catch (err) {
-      status    = 'failed';
-      aiError   = err instanceof Error ? err.message : String(err);
+      status  = 'failed';
+      const raw = err instanceof Error ? err.message : String(err);
+      const isZodError = raw.startsWith('[') && raw.includes('"code"');
+      aiError = isZodError
+        ? 'KI-Antwort hatte ein unerwartetes Format. Bitte erneut versuchen.'
+        : raw;
+      console.error('[OfferCheck] AI failed:', raw);
       resultJson = { error: aiError } as unknown as Json;
     }
   }

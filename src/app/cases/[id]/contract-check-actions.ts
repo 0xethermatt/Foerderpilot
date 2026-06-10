@@ -142,8 +142,14 @@ export async function runContractCheckAction(
       riskLevel  = result.risk_level;
       confidence = result.confidence;
     } catch (err) {
-      status    = 'failed';
-      aiError   = err instanceof Error ? err.message : String(err);
+      status  = 'failed';
+      const raw = err instanceof Error ? err.message : String(err);
+      // ZodError messages are a raw JSON array – never show those to users
+      const isZodError = raw.startsWith('[') && raw.includes('"code"');
+      aiError = isZodError
+        ? 'KI-Antwort hatte ein unerwartetes Format. Bitte erneut versuchen.'
+        : raw;
+      console.error('[ContractCheck] AI failed:', raw);
       resultJson = { error: aiError } as unknown as Json;
     }
   }
