@@ -291,7 +291,7 @@ function DocumentItem({
   caseId: string;
 }) {
   return (
-    <div className="py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
+    <div className="py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0" data-doc-type={doc.type} data-doc-status={doc.status}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -340,8 +340,7 @@ function DocumentItem({
         (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
         <ContractCheckForm documentId={doc.id} caseId={caseId} />
       )}
-      {doc.type === 'offer' &&
-        (doc.status === 'uploaded' || doc.status === 'needs_review' || doc.status === 'reviewed') && (
+      {doc.type === 'offer' && doc.status !== 'missing' && (
         <OfferCheckForm documentId={doc.id} caseId={caseId} />
       )}
     </div>
