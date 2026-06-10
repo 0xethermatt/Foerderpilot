@@ -76,11 +76,16 @@ export type FundingPrecheckResult = z.infer<typeof FundingPrecheckResultSchema>;
 export type { ContractCheckInput, ContractCheckResult } from './contract-check/types';
 export { ContractCheckResultSchema } from './contract-check/types';
 
+export type { OfferCheckInput, OfferCheckResult } from './offer-check/types';
+export { OfferCheckResultSchema } from './offer-check/types';
+
 import type { ContractCheckInput, ContractCheckResult } from './contract-check/types';
+import type { OfferCheckInput, OfferCheckResult } from './offer-check/types';
 
 export interface AIReasoningProvider {
   readonly providerName: string;
   readonly modelName: string;
   runFundingPrecheck(input: FundingPrecheckInput): Promise<FundingPrecheckResult>;
   runContractCheck(input: ContractCheckInput): Promise<ContractCheckResult>;
+  runOfferCheck(input: OfferCheckInput): Promise<OfferCheckResult>;
 }

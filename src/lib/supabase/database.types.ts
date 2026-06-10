@@ -60,7 +60,7 @@ export type DbDocumentStatus =
   | 'missing'
   | 'rejected'
 
-export type DbAICheckType = 'funding_precheck' | 'contract_check'
+export type DbAICheckType = 'funding_precheck' | 'contract_check' | 'offer_check'
 export type DbAICheckStatus = 'draft' | 'completed' | 'failed'
 export type DbAIHumanReviewStatus = 'pending' | 'approved' | 'rejected'
 

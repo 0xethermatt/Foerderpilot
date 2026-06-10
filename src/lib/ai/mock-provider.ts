@@ -1,5 +1,6 @@
 import type { AIReasoningProvider, FundingPrecheckInput, FundingPrecheckResult } from './types';
 import type { ContractCheckInput, ContractCheckResult } from './contract-check/types';
+import type { OfferCheckInput, OfferCheckResult } from './offer-check/types';
 
 export class MockAIProvider implements AIReasoningProvider {
   readonly providerName = 'mock';
@@ -250,6 +251,145 @@ export class MockAIProvider implements AIReasoningProvider {
           : !reservationPresent
             ? 'bei der Prüfung Ihres Vertrags wurde festgestellt, dass ein Fördervorbehalt fehlt. Dieser ist für die KfW-Heizungsförderung zwingend erforderlich. Bitte lassen Sie den Vertrag entsprechend ergänzen.'
             : 'Ihr Vertrag wurde geprüft und enthält die wesentlichen Merkmale für die KfW-Heizungsförderung. Die abschließende Prüfung erfolgt durch unseren Sachbearbeiter.',
+        '',
+        'Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
+        '',
+        'Mit freundlichen Grüßen',
+        'Ihr Förderpilot-Team',
+        '',
+        '[MOCK-PROVIDER – Diese E-Mail nicht versenden]',
+      ].join('\n'),
+      internal_notes_de: [
+        '[MOCK-PROVIDER AKTIV – Kein ANTHROPIC_API_KEY konfiguriert]',
+        `Dokument: ${input.documentName}`,
+        `Extraktionsstatus: ${input.extractionStatus}`,
+        ...(input.pageCount ? [`Seitenanzahl: ${input.pageCount}`] : []),
+      ],
+      confidence,
+      human_review_required: true,
+    };
+  }
+
+  // ─── Offer check (mock) ───────────────────────────────────────────────────────
+
+  async runOfferCheck(input: OfferCheckInput): Promise<OfferCheckResult> {
+    const name = input.documentName.toLowerCase();
+
+    const textEmpty = input.extractionStatus === 'empty' || input.extractionStatus === 'failed';
+    const isComplete =
+      name.includes('vollstaendig') || name.includes('vollständig') || name.includes('complete');
+    const isIncomplete =
+      name.includes('unvollstaendig') || name.includes('unvollständig') || name.includes('incomplete');
+
+    let overall_assessment: OfferCheckResult['overall_assessment'];
+    let risk_level: OfferCheckResult['risk_level'];
+    let confidence: OfferCheckResult['confidence'];
+
+    if (textEmpty) {
+      overall_assessment = 'critical';
+      risk_level = 'red';
+      confidence = 'low';
+    } else if (isComplete) {
+      overall_assessment = 'needs_revision';
+      risk_level = 'yellow';
+      confidence = 'medium';
+    } else if (isIncomplete) {
+      overall_assessment = 'critical';
+      risk_level = 'red';
+      confidence = 'medium';
+    } else {
+      overall_assessment = 'needs_revision';
+      risk_level = 'yellow';
+      confidence = 'low';
+    }
+
+    const heatPumpPresent = !textEmpty;
+    const hasHydraulicBalancing = isComplete;
+    const hasCosts = isComplete;
+
+    const summary = textEmpty
+      ? 'Aus dem PDF konnte kein Text gelesen werden. Eine inhaltliche Prüfung des Angebots ist nicht möglich.'
+      : isComplete
+        ? 'Das Angebot enthält nach automatischer Vorprüfung eine Wärmepumpe. Einige Details sollten fachlich geprüft werden.'
+        : isIncomplete
+          ? 'Das Angebot wirkt nach automatischer Vorprüfung unvollständig. Wichtige Angaben fehlen oder sind unklar. Eine überarbeitete Version sollte angefordert werden.'
+          : 'Die Angebotsprüfung konnte auf Basis des verfügbaren Texts keine eindeutige Einschätzung liefern. Manuelle Prüfung erforderlich.';
+
+    return {
+      overall_assessment,
+      risk_level,
+      summary_de: summary,
+      detected_document_type: textEmpty ? null : 'Angebot Wärmepumpeninstallation [MOCK]',
+      project_parties: {
+        customer_name: null,
+        contractor_name: null,
+        project_address: input.projectCity ?? null,
+      },
+      heat_pump: {
+        present: heatPumpPresent,
+        manufacturer: isComplete ? 'Muster GmbH [MOCK]' : null,
+        model: isComplete ? 'Typ XY-123 [MOCK]' : null,
+        type: isComplete ? 'Luft/Wasser-Wärmepumpe [MOCK]' : null,
+        assessment_de: heatPumpPresent
+          ? 'Wärmepumpe erkennbar. Hersteller und Modell sollten fachlich verifiziert werden.'
+          : 'Keine Wärmepumpe im Angebotstext erkennbar. Angebot sollte überprüft werden.',
+      },
+      costs: {
+        net_amount: hasCosts ? '15.000,00 € [MOCK]' : null,
+        gross_amount: hasCosts ? '17.850,00 € [MOCK]' : null,
+        vat_rate: hasCosts ? '19% [MOCK]' : null,
+        assessment_de: hasCosts
+          ? 'Kosten nach automatischer Vorprüfung erkennbar. Fachliche Prüfung empfohlen.'
+          : 'Kosten nicht eindeutig erkennbar oder fehlend. Klärung erforderlich.',
+      },
+      eligible_scope_indicators: {
+        demolition_old_heating_present: isComplete,
+        hydraulic_balancing_present: hasHydraulicBalancing,
+        commissioning_present: isComplete,
+        electrical_work_present: isComplete,
+        buffer_or_storage_present: isComplete,
+        environmental_measures_present: false,
+        assessment_de: isComplete
+          ? 'Wesentliche förderrelevante Leistungen erkennbar. Manuelle Prüfung empfohlen.'
+          : 'Einige förderrelevante Leistungen fehlen oder sind unklar.',
+      },
+      implementation_period: {
+        present: isComplete,
+        excerpt_de: isComplete ? '[MOCK] Ausführung: nach KfW-Genehmigung' : null,
+        assessment_de: isComplete
+          ? 'Ausführungszeitraum erkennbar.'
+          : 'Kein Ausführungszeitraum erkennbar.',
+      },
+      missing_or_unclear_items: [
+        ...(!heatPumpPresent ? ['Keine Wärmepumpe im Angebot erkennbar'] : []),
+        ...(!isComplete && heatPumpPresent ? ['Hersteller und Modell der Wärmepumpe fehlen'] : []),
+        ...(!hasHydraulicBalancing ? ['Hydraulischer Abgleich nicht erkennbar (Pflichtleistung)'] : []),
+        ...(!hasCosts ? ['Gesamtkosten (netto/brutto) nicht erkennbar'] : []),
+        ...(textEmpty ? ['Angebotstext nicht lesbar (möglicherweise gescanntes PDF)'] : []),
+      ],
+      critical_findings: !heatPumpPresent
+        ? ['Keine Wärmepumpe als Leistungsposition erkennbar – Förderprüfung nicht möglich']
+        : [],
+      recommended_changes: [
+        ...(!heatPumpPresent ? ['Wärmepumpe als explizite Leistungsposition aufnehmen'] : []),
+        ...(!isComplete && heatPumpPresent ? ['Hersteller und genaue Modellbezeichnung der Wärmepumpe ergänzen'] : []),
+        ...(!hasHydraulicBalancing ? ['Hydraulischen Abgleich als separate Position aufnehmen'] : []),
+      ],
+      recommended_next_steps: [
+        ...(overall_assessment === 'critical' || overall_assessment === 'needs_revision'
+          ? ['Überarbeitetes, vollständiges Angebot beim Fachbetrieb anfordern']
+          : []),
+        'Manuelle Prüfung durch qualifizierten Sachbearbeiter durchführen',
+        ...(overall_assessment !== 'critical'
+          ? ['Angebot kann nach positivem Review weiterverarbeitet werden']
+          : []),
+      ],
+      customer_message_draft_de: [
+        'Sehr geehrte Kundin, sehr geehrter Kunde,',
+        '',
+        heatPumpPresent && isComplete
+          ? 'Ihr Angebot wurde nach automatischer Vorprüfung geprüft und wirkt grundsätzlich plausibel. Unser Sachbearbeiter wird das Angebot noch manuell prüfen und sich bei Ihnen melden.'
+          : 'bei der Vorprüfung Ihres Angebots wurden einige Punkte festgestellt, die noch geklärt werden sollten. Bitte wenden Sie sich an Ihren Fachbetrieb und fordern Sie ein überarbeitetes Angebot an.',
         '',
         'Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
         '',
