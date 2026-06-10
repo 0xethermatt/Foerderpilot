@@ -9,6 +9,10 @@ import {
   markAICheckRejectedAction,
 } from './ai-actions';
 import type { AICheckActionState } from './ai-actions';
+import {
+  markAICheckDocumentReviewedAction,
+  markAICheckDocumentRejectedAction,
+} from './ai-check-document-actions';
 import type { Database } from '@/lib/supabase/database.types';
 import type { FundingPrecheckResult } from '@/lib/ai/types';
 import type { ContractCheckResult } from '@/lib/ai/contract-check/types';
@@ -511,9 +515,25 @@ function AICheckCard({
             {check.disclaimer || 'KI-Ergebnis erfordert manuelle Prüfung. Keine Fördergarantie.'}
           </p>
 
-          {/* Review buttons */}
+          {/* Review buttons (only while pending) */}
           {check.human_review_status === 'pending' && check.status === 'completed' && (
             <ReviewButtons checkId={check.id} caseId={caseId} />
+          )}
+
+          {/* Helper text after review decision (funding_precheck only – no document buttons) */}
+          {check.human_review_status === 'approved' && (
+            <div className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 px-3 py-2">
+              <p className="text-xs text-green-800 dark:text-green-300">
+                Fördercheck fachlich freigegeben. Bitte nächste Schritte und BzA-Vorbereitung prüfen.
+              </p>
+            </div>
+          )}
+          {check.human_review_status === 'rejected' && (
+            <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-3 py-2">
+              <p className="text-xs text-red-800 dark:text-red-300">
+                Fördercheck abgelehnt. Fall manuell prüfen und fehlende Punkte klären.
+              </p>
+            </div>
           )}
         </div>
       )}
@@ -567,6 +587,12 @@ function ContractCheckCard({
   const result = check.status === 'completed' && isValidContractResult(check.result_json)
     ? (check.result_json as unknown as ContractCheckResult)
     : null;
+
+  // Detect whether this check has a linked document_id (stored in result_json.meta)
+  const meta = typeof check.result_json === 'object' && check.result_json !== null
+    ? (check.result_json as Record<string, unknown>).meta as Record<string, unknown> | undefined
+    : undefined;
+  const hasDocumentId = typeof meta?.document_id === 'string';
 
   const reviewCfg = REVIEW_CONFIG[check.human_review_status as keyof typeof REVIEW_CONFIG]
     ?? REVIEW_CONFIG.pending;
@@ -690,18 +716,6 @@ function ContractCheckCard({
               {/* Narrative summary */}
               {result.summary_de && (
                 <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{result.summary_de}</p>
-              )}
-
-              {/* Inline helpers for document status */}
-              {result.overall_assessment === 'pass' && (
-                <p className="text-xs text-green-700 dark:text-green-400 italic">
-                  Bei positivem Review kann der Vertrag manuell auf Geprüft gesetzt werden.
-                </p>
-              )}
-              {result.overall_assessment === 'critical' && (
-                <p className="text-xs text-red-700 dark:text-red-400 italic">
-                  Vertrag sollte nicht als geprüft markiert werden, bevor er korrigiert wurde.
-                </p>
               )}
 
               {/* Details toggle */}
@@ -900,9 +914,47 @@ function ContractCheckCard({
             {check.disclaimer || 'KI-Vertragsprüfung erfordert manuelle Prüfung. Keine Fördergarantie.'}
           </p>
 
-          {/* Review buttons */}
+          {/* Review buttons (only while pending) */}
           {check.human_review_status === 'pending' && check.status === 'completed' && result && (
             <ReviewButtons checkId={check.id} caseId={caseId} />
+          )}
+
+          {/* Follow-up actions after human review decision */}
+          {check.human_review_status === 'approved' && hasDocumentId && (
+            <div className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3 space-y-2">
+              <p className="text-xs text-green-800 dark:text-green-300">
+                Vertragsprüfung freigegeben. Der Vertrag kann nun manuell als geprüft markiert werden, wenn die fachliche Prüfung abgeschlossen ist.
+              </p>
+              <form action={markAICheckDocumentReviewedAction}>
+                <input type="hidden" name="check_id" value={check.id} />
+                <input type="hidden" name="case_id" value={caseId} />
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900 px-3 py-1.5 text-xs font-medium text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Vertrag als geprüft markieren
+                </button>
+              </form>
+            </div>
+          )}
+          {check.human_review_status === 'rejected' && hasDocumentId && (
+            <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-3 space-y-2">
+              <p className="text-xs text-red-800 dark:text-red-300">
+                Vertragsprüfung abgelehnt. Der Vertrag sollte korrigiert und neu hochgeladen oder erneut geprüft werden.
+              </p>
+              <form action={markAICheckDocumentRejectedAction}>
+                <input type="hidden" name="check_id" value={check.id} />
+                <input type="hidden" name="case_id" value={caseId} />
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900 px-3 py-1.5 text-xs font-medium text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Vertrag als abgelehnt markieren
+                </button>
+              </form>
+            </div>
           )}
         </div>
       )}
@@ -956,6 +1008,11 @@ function OfferCheckCard({
   const result = check.status === 'completed' && isValidOfferResult(check.result_json)
     ? (check.result_json as unknown as OfferCheckResult)
     : null;
+
+  const meta = typeof check.result_json === 'object' && check.result_json !== null
+    ? (check.result_json as Record<string, unknown>).meta as Record<string, unknown> | undefined
+    : undefined;
+  const hasDocumentId = typeof meta?.document_id === 'string';
 
   const reviewCfg = REVIEW_CONFIG[check.human_review_status as keyof typeof REVIEW_CONFIG]
     ?? REVIEW_CONFIG.pending;
@@ -1338,9 +1395,47 @@ function OfferCheckCard({
             {check.disclaimer || 'KI-Angebotsprüfung erfordert manuelle Prüfung. Keine Fördergarantie.'}
           </p>
 
-          {/* Review buttons */}
+          {/* Review buttons (only while pending) */}
           {check.human_review_status === 'pending' && check.status === 'completed' && result && (
             <ReviewButtons checkId={check.id} caseId={caseId} />
+          )}
+
+          {/* Follow-up actions after human review decision */}
+          {check.human_review_status === 'approved' && hasDocumentId && (
+            <div className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 p-3 space-y-2">
+              <p className="text-xs text-green-800 dark:text-green-300">
+                Angebotsprüfung freigegeben. Das Angebot kann nun manuell als geprüft markiert werden, wenn die fachliche Prüfung abgeschlossen ist.
+              </p>
+              <form action={markAICheckDocumentReviewedAction}>
+                <input type="hidden" name="check_id" value={check.id} />
+                <input type="hidden" name="case_id" value={caseId} />
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900 px-3 py-1.5 text-xs font-medium text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Angebot als geprüft markieren
+                </button>
+              </form>
+            </div>
+          )}
+          {check.human_review_status === 'rejected' && hasDocumentId && (
+            <div className="rounded-md bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 p-3 space-y-2">
+              <p className="text-xs text-red-800 dark:text-red-300">
+                Angebotsprüfung abgelehnt. Das Angebot sollte korrigiert und neu hochgeladen oder erneut geprüft werden.
+              </p>
+              <form action={markAICheckDocumentRejectedAction}>
+                <input type="hidden" name="check_id" value={check.id} />
+                <input type="hidden" name="case_id" value={caseId} />
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900 px-3 py-1.5 text-xs font-medium text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition-colors flex items-center justify-center gap-1"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Angebot als abgelehnt markieren
+                </button>
+              </form>
+            </div>
           )}
         </div>
       )}

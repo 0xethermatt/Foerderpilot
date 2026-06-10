@@ -98,12 +98,15 @@ export async function runOfferCheckAction(
   let status: 'completed' | 'failed'               = 'completed';
   let aiError: string | undefined;
 
+  const checkMeta = { document_id: documentId, document_type: 'offer' as const };
+
   if (extraction.extraction_status === 'empty') {
     resultJson = {
       extraction_failed: true,
       extraction_status: 'empty',
       message_de:
         'Aus dem PDF konnte kein Text gelesen werden. Für gescannte PDFs wird später OCR benötigt.',
+      meta: checkMeta,
     } as unknown as Json;
     confidence = 'low';
     status     = 'failed';
@@ -114,6 +117,7 @@ export async function runOfferCheckAction(
       extraction_failed: true,
       extraction_status: 'failed',
       error: extraction.error ?? 'PDF-Extraktion fehlgeschlagen',
+      meta: checkMeta,
     } as unknown as Json;
     confidence = 'low';
     status     = 'failed';
@@ -133,7 +137,7 @@ export async function runOfferCheckAction(
 
     try {
       const result = await provider.runOfferCheck(input);
-      resultJson = result as unknown as Json;
+      resultJson = { ...(result as object), meta: checkMeta } as unknown as Json;
       summary    = result.summary_de;
       riskLevel  = result.risk_level;
       confidence = result.confidence;
@@ -145,7 +149,7 @@ export async function runOfferCheckAction(
         ? 'KI-Antwort hatte ein unerwartetes Format. Bitte erneut versuchen.'
         : raw;
       console.error('[OfferCheck] AI failed:', raw);
-      resultJson = { error: aiError } as unknown as Json;
+      resultJson = { error: aiError, meta: checkMeta } as unknown as Json;
     }
   }
 
