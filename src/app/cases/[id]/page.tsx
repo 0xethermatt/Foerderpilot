@@ -359,18 +359,22 @@ export default async function CaseDetailPage({
           />
 
           {/* Status & risk */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Status & Risiko</h2>
-            <div className="flex gap-2 mb-3">
-              <StatusBadge status={fundingCase.status as FundingCaseStatus} />
-              <RiskBadge risk={fundingCase.risk_level as RiskLevel} />
-            </div>
+          <CollapsibleCard
+            title="Status & Risiko"
+            defaultOpen={false}
+            badge={
+              <div className="flex gap-1.5">
+                <StatusBadge status={fundingCase.status as FundingCaseStatus} />
+                <RiskBadge risk={fundingCase.risk_level as RiskLevel} />
+              </div>
+            }
+          >
             <StatusRiskEditor
               caseId={fundingCase.id}
               currentStatus={fundingCase.status as FundingCaseStatus}
               currentRisk={fundingCase.risk_level as RiskLevel}
             />
-          </div>
+          </CollapsibleCard>
         </div>
       </div>
     </div>

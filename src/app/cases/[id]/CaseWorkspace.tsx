@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, CheckCircle2, ArrowDown, Milestone } from 'lucide-react';
+import { Clock, CheckCircle2, ArrowDown, Milestone, FolderOpen } from 'lucide-react';
 import type { ReadinessSummary, ChecklistItem } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 import { computeBzaPreparation } from '@/lib/bza/preparation';
@@ -28,47 +28,60 @@ const POST_STATUSES = new Set([
 // ─── Sub-panels ───────────────────────────────────────────────────────────────
 
 function MissingDocsPanel({ checklistItems }: { checklistItems: ChecklistItem[] }) {
-  const items = checklistItems.filter(
-    (i) => i.phase === 'before_application' && i.required && (i.status === 'missing' || i.status === 'rejected'),
+  const missing  = checklistItems.filter(
+    (i) => i.phase === 'before_application' && i.required && i.status === 'missing',
   );
+  const rejected = checklistItems.filter(
+    (i) => i.phase === 'before_application' && i.required && i.status === 'rejected',
+  );
+  const total = missing.length + rejected.length;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-red-200 dark:border-red-900 p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Jetzt zu tun: Fehlende Unterlagen beschaffen
-        </h2>
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-orange-200 dark:border-orange-900 p-5">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 text-orange-500 flex-shrink-0" />
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Jetzt zu tun: Unterlagen vervollständigen
+          </h2>
+        </div>
+        <span className="flex-shrink-0 text-xs font-medium text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 rounded-full px-2 py-0.5">
+          {total} offen
+        </span>
       </div>
 
       <ul className="space-y-1.5 mb-4">
-        {items.map((item) => (
+        {rejected.map((item) => (
           <li key={item.document_type} className="flex items-start gap-2 text-sm">
-            <span
-              className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
-                item.status === 'rejected' ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-              }`}
-            />
-            <span className={item.status === 'rejected' ? 'text-red-700 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}>
-              {item.label_de}
-              {item.status === 'rejected' && ' – abgelehnt, bitte korrigieren und neu hochladen'}
-              {item.status === 'missing'  && ' – fehlt'}
+            <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-red-500" />
+            <span className="text-red-700 dark:text-red-400">
+              {item.label_de} – abgelehnt, bitte korrigieren und neu hochladen
             </span>
+          </li>
+        ))}
+        {missing.map((item) => (
+          <li key={item.document_type} className="flex items-start gap-2 text-sm">
+            <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-orange-300 dark:bg-orange-600" />
+            <span className="text-gray-700 dark:text-gray-300">{item.label_de}</span>
           </li>
         ))}
       </ul>
 
-      <a
-        href="#documents"
-        className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 text-xs font-medium hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors"
-      >
-        <ArrowDown className="h-3.5 w-3.5" />
-        Dokument hochladen
-      </a>
-
-      <p className="mt-2.5 text-xs text-gray-400 dark:text-gray-500">
-        {items.length} Pflichtunterlage{items.length !== 1 ? 'n fehlen' : ' fehlt'} vor der Antragstellung.
-      </p>
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="#documents"
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 text-xs font-medium hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors"
+        >
+          <ArrowDown className="h-3.5 w-3.5" />
+          Dokument hochladen
+        </a>
+        <a
+          href="#tasks"
+          className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          Aufgaben erstellen
+        </a>
+      </div>
     </div>
   );
 }
@@ -87,33 +100,35 @@ function ReviewNeededPanel({ checklistItems, aiChecks }: { checklistItems: Check
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-yellow-200 dark:border-yellow-900 p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Jetzt zu tun: Hochgeladene Unterlagen prüfen
-        </h2>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Jetzt zu tun: Unterlagen prüfen
+          </h2>
+        </div>
+        <span className="flex-shrink-0 text-xs font-medium text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 rounded-full px-2 py-0.5">
+          {items.length} ausstehend
+        </span>
       </div>
 
       <ul className="space-y-1.5 mb-4">
         {items.map((item) => {
-          const hasCheck =
-            (item.document_type === 'contract' && latestContractCheck) ||
-            (item.document_type === 'offer' && latestOfferCheck);
           const checkPending =
             (item.document_type === 'contract' && latestContractCheck?.human_review_status === 'pending') ||
             (item.document_type === 'offer' && latestOfferCheck?.human_review_status === 'pending');
+          const hasCheck =
+            (item.document_type === 'contract' && latestContractCheck) ||
+            (item.document_type === 'offer' && latestOfferCheck);
           return (
             <li key={item.document_type} className="flex items-start gap-2 text-sm">
               <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400" />
               <span className="text-gray-700 dark:text-gray-300">
                 {item.label_de}
-                {hasCheck
-                  ? checkPending
-                    ? ' – KI-Prüfung vorhanden, bitte freigeben oder ablehnen'
-                    : ' – prüfen'
-                  : item.document_type === 'contract' || item.document_type === 'offer'
-                  ? ' – KI-Prüfung starten oder manuell prüfen'
-                  : ' – bitte prüfen'}
+                {checkPending && ' – KI-Prüfung offen, bitte freigeben'}
+                {hasCheck && !checkPending && ' – KI-Prüfung vorhanden'}
+                {!hasCheck && (item.document_type === 'contract' || item.document_type === 'offer') &&
+                  ' – KI-Prüfung empfohlen'}
               </span>
             </li>
           );
@@ -152,9 +167,9 @@ function BzaReadyPanel({
       label:  'Fast BzA-Bereit',
     },
     nicht_bereit: {
-      border: 'border-red-200 dark:border-red-900',
-      badge:  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      label:  'Nicht BzA-Bereit',
+      border: 'border-orange-200 dark:border-orange-900',
+      badge:  'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+      label:  'Punkte klären',
     },
   }[bzaStatus];
 
@@ -235,14 +250,14 @@ export default function CaseWorkspace({
     return <ReviewNeededPanel checklistItems={checklistItems} aiChecks={aiChecks} />;
   }
 
-  const bzaPrep = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
-  const blockingWarnings = bzaPrep.warnings.filter((w) => w.level === 'error').length;
+  const bzaPrep       = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
+  const blockingWarns = bzaPrep.warnings.filter((w) => w.level === 'error').length;
 
   return (
     <BzaReadyPanel
       readiness={readiness}
       bzaStatus={bzaPrep.readinessStatus}
-      blockingWarnings={blockingWarnings}
+      blockingWarnings={blockingWarns}
     />
   );
 }

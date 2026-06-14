@@ -27,26 +27,40 @@ function deriveActions(
 ): DerivedAction[] {
   const actions: DerivedAction[] = [];
 
-  // 1. Missing / rejected required before-application docs
+  // 1. Missing / rejected required before-application docs – consolidate into one entry if multiple
   const missingItems = checklistItems.filter(
     (i) =>
       i.phase === 'before_application' &&
       i.required &&
       (i.status === 'missing' || i.status === 'rejected'),
   );
-  for (const item of missingItems.slice(0, 4)) {
+  const rejectedItems = missingItems.filter((i) => i.status === 'rejected');
+  if (missingItems.length === 1) {
+    const item = missingItems[0];
     actions.push({
-      label:
-        item.status === 'rejected'
-          ? `${item.label_de} korrigieren und neu hochladen`
-          : `${item.label_de} hochladen`,
+      label: item.status === 'rejected'
+        ? `${item.label_de} korrigieren und neu hochladen`
+        : `${item.label_de} hochladen`,
+      type: 'Dokument',
+      href: '#documents',
+    });
+  } else if (rejectedItems.length > 0 && rejectedItems.length < missingItems.length) {
+    actions.push({
+      label: `${rejectedItems.length} Unterlage${rejectedItems.length !== 1 ? 'n' : ''} korrigieren, ${missingItems.length - rejectedItems.length} hochladen`,
+      type: 'Dokument',
+      href: '#documents',
+    });
+  } else if (missingItems.length > 1) {
+    const verb = rejectedItems.length === missingItems.length ? 'korrigieren' : 'hochladen';
+    actions.push({
+      label: `${missingItems.length} Unterlagen ${verb}`,
       type: 'Dokument',
       href: '#documents',
     });
   }
 
   // 2. AI checks to start (contract/offer uploaded but no completed check yet)
-  if (actions.length < 5) {
+  if (actions.length < 4) {
     const contractItem = checklistItems.find(
       (i) => i.document_type === 'contract' && i.status === 'needs_review',
     );
@@ -69,7 +83,7 @@ function deriveActions(
   }
 
   // 3. Pending AI check reviews
-  if (actions.length < 5) {
+  if (actions.length < 4) {
     const pendingChecks = aiChecks.filter(
       (c) => c.status === 'completed' && c.human_review_status === 'pending',
     );
@@ -86,7 +100,7 @@ function deriveActions(
 
   // 4. BzA actions (once docs are reviewed)
   if (
-    actions.length < 5 &&
+    actions.length < 4 &&
     readiness.blocking_count === 0 &&
     readiness.needs_review_count === 0
   ) {
@@ -100,19 +114,19 @@ function deriveActions(
   }
 
   // 5. Open tasks (high priority first)
-  if (actions.length < 5) {
+  if (actions.length < 4) {
     const openTasks = tasks
       .filter((t) => !t.completed)
       .sort(
         (a, b) =>
           (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1),
       );
-    for (const task of openTasks.slice(0, 5 - actions.length)) {
+    for (const task of openTasks.slice(0, 4 - actions.length)) {
       actions.push({ label: task.title, type: 'Aufgabe', href: '#tasks' });
     }
   }
 
-  return actions.slice(0, 5);
+  return actions.slice(0, 4);
 }
 
 // ─── Styling helpers ──────────────────────────────────────────────────────────
