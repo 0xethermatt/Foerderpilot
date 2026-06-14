@@ -25,6 +25,7 @@ import CompactDocumentsTable from './CompactDocumentsTable';
 import CollapsibleCard from './CollapsibleCard';
 
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
+import { computeBzaPreparation } from '@/lib/bza/preparation';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
@@ -153,8 +154,12 @@ export default async function CaseDetailPage({
     }
   }
 
-  const openTaskCount = allTasks.filter((t) => !t.completed).length;
-  const bzaAutoOpen   = readiness.blocking_count === 0 && readiness.needs_review_count === 0;
+  const openTaskCount       = allTasks.filter((t) => !t.completed).length;
+  const bzaAutoOpen         = readiness.blocking_count === 0 && readiness.needs_review_count === 0;
+  const hasPendingAIReview  = aiChecks.some(
+    (c) => c.status === 'completed' && c.human_review_status === 'pending',
+  );
+  const bzaPrep = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
 
   const projectAddress = [
     fundingCase.project_address_street,
@@ -307,14 +312,18 @@ export default async function CaseDetailPage({
             )}
           </CollapsibleCard>
 
-          {/* AI checks – collapsed */}
+          {/* AI checks – auto-opens when a review is pending */}
           <CollapsibleCard
             id="ai-checks"
             title="KI-Prüfungen"
-            defaultOpen={false}
+            defaultOpen={hasPendingAIReview}
             icon={<ShieldAlert className="h-4 w-4" />}
             badge={
-              aiChecks.length > 0 ? (
+              hasPendingAIReview ? (
+                <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 rounded-full px-1.5 py-0.5">
+                  Prüfung offen
+                </span>
+              ) : aiChecks.length > 0 ? (
                 <span className="text-xs text-gray-400 dark:text-gray-500">{aiChecks.length}</span>
               ) : undefined
             }
@@ -332,6 +341,21 @@ export default async function CaseDetailPage({
             title="BzA-Vorbereitung"
             defaultOpen={bzaAutoOpen}
             icon={<ClipboardCheck className="h-4 w-4" />}
+            badge={
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                bzaPrep.readinessStatus === 'bereit'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                  : bzaPrep.readinessStatus === 'fast_bereit'
+                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                  : 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'
+              }`}>
+                {bzaPrep.readinessStatus === 'bereit'
+                  ? 'Bereit'
+                  : bzaPrep.readinessStatus === 'fast_bereit'
+                  ? 'Fast bereit'
+                  : 'Nicht bereit'}
+              </span>
+            }
           >
             <BzaPreparationSection
               caseId={fundingCase.id}

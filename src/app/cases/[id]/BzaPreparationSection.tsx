@@ -4,7 +4,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ClipboardList, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2,
+  ChevronDown, ChevronUp, AlertTriangle, CheckCircle2,
   XCircle, Info, Copy, RefreshCw, Plus, CheckCircle,
 } from 'lucide-react';
 import {
@@ -41,7 +41,7 @@ const DOC_STATUS_CFG: Record<string, { label: string; cls: string; icon: React.R
   reviewed:     { label: 'Geprüft',    cls: 'text-green-700 dark:text-green-400',  icon: <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-green-600 dark:text-green-400" /> },
   needs_review: { label: 'Ausstehend', cls: 'text-yellow-700 dark:text-yellow-500', icon: <Info className="h-3.5 w-3.5 flex-shrink-0 text-yellow-500" /> },
   rejected:     { label: 'Abgelehnt',  cls: 'text-red-700 dark:text-red-400',      icon: <XCircle className="h-3.5 w-3.5 flex-shrink-0 text-red-600 dark:text-red-400" /> },
-  missing:      { label: 'Fehlt',      cls: 'text-red-700 dark:text-red-400',      icon: <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-red-600 dark:text-red-400" /> },
+  missing:      { label: 'Fehlt',      cls: 'text-orange-700 dark:text-orange-400', icon: <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-orange-500" /> },
 };
 
 const BZA_RESPONSIBLE_OPTIONS = [
@@ -395,8 +395,9 @@ export default function BzaPreparationSection({
   // Collapsible state (default: checks open if available, details closed)
   const [stammdatenOpen, setStammdatenOpen] = useState(false);
   const [heizungOpen,    setHeizungOpen]    = useState(false);
-  const [vertragOpen,    setVertragOpen]    = useState(!!bza.preferredContractCheck);
-  const [angebotOpen,    setAngebotOpen]    = useState(!!bza.preferredOfferCheck);
+  const [vertragOpen,    setVertragOpen]    = useState(false);
+  const [angebotOpen,    setAngebotOpen]    = useState(false);
+  const [actionsOpen,    setActionsOpen]    = useState(false);
 
   // Clipboard
   const [copyOk, setCopyOk] = useState(false);
@@ -440,20 +441,9 @@ export default function BzaPreparationSection({
   const warningColor = errorCount > 0 ? 'text-red-700 dark:text-red-400' : warnCount > 0 ? 'text-yellow-700 dark:text-yellow-500' : 'text-green-700 dark:text-green-400';
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">BzA-Vorbereitung</h2>
-        </div>
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${statusCfg.cls}`}>
-          {statusCfg.label}
-        </span>
-      </div>
-
+    <div className="space-y-4">
       {/* ── Disclaimer ── */}
-      <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 rounded-md px-2.5 py-1.5 mt-2">
+      <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 rounded-md px-2.5 py-1.5">
         Internes Vorbereitungsblatt · keine Fördergarantie · keine automatische KfW-Antragstellung · manuelle Prüfung erforderlich
       </p>
 
@@ -479,7 +469,7 @@ export default function BzaPreparationSection({
         </div>
       </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="space-y-4">
 
         {/* ── Warnings ── */}
         {bza.warnings.length > 0 && (
@@ -682,43 +672,52 @@ export default function BzaPreparationSection({
           )}
         </div>
 
-        {/* ── Actions ── */}
-        <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => router.refresh()}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Aktualisieren
-            </button>
+        {/* ── Actions (collapsible) ── */}
+        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+          <SectionToggle
+            title="Weitere Aktionen"
+            open={actionsOpen}
+            onToggle={() => setActionsOpen((v) => !v)}
+          />
+          {actionsOpen && (
+            <div className="mt-2 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => router.refresh()}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Aktualisieren
+                </button>
 
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              {copyOk
-                ? <><CheckCircle className="h-3.5 w-3.5 text-green-600" /><span className="text-green-700 dark:text-green-400">Kopiert!</span></>
-                : <><Copy className="h-3.5 w-3.5" />Als Markdown kopieren</>
-              }
-            </button>
+                <button
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {copyOk
+                    ? <><CheckCircle className="h-3.5 w-3.5 text-green-600" /><span className="text-green-700 dark:text-green-400">Kopiert!</span></>
+                    : <><Copy className="h-3.5 w-3.5" />Als Markdown kopieren</>
+                  }
+                </button>
 
-            <form action={tasksFormAction}>
-              <input type="hidden" name="case_id" value={caseId} />
-              <CreateTasksButton />
-            </form>
-          </div>
+                <form action={tasksFormAction}>
+                  <input type="hidden" name="case_id" value={caseId} />
+                  <CreateTasksButton />
+                </form>
+              </div>
 
-          {tasksState?.created !== undefined && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {tasksState.created === 0
-                ? 'Alle BzA-Aufgaben bereits vorhanden.'
-                : `${tasksState.created} Aufgabe${tasksState.created !== 1 ? 'n' : ''} erstellt${tasksState.skipped ? ` · ${tasksState.skipped} bereits vorhanden` : ''}.`
-              }
-            </p>
-          )}
-          {tasksState?.error && (
-            <p className="text-xs text-red-600 dark:text-red-400">{tasksState.error}</p>
+              {tasksState?.created !== undefined && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {tasksState.created === 0
+                    ? 'Alle BzA-Aufgaben bereits vorhanden.'
+                    : `${tasksState.created} Aufgabe${tasksState.created !== 1 ? 'n' : ''} erstellt${tasksState.skipped ? ` · ${tasksState.skipped} bereits vorhanden` : ''}.`
+                  }
+                </p>
+              )}
+              {tasksState?.error && (
+                <p className="text-xs text-red-600 dark:text-red-400">{tasksState.error}</p>
+              )}
+            </div>
           )}
         </div>
       </div>
