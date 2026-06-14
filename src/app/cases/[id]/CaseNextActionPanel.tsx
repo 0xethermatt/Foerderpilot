@@ -1,4 +1,4 @@
-import { Zap, FileUp, ScanSearch, Settings, ClipboardList, FileCheck } from 'lucide-react';
+import { Zap, FileUp, ScanSearch, Settings, ClipboardList, FileCheck, Archive } from 'lucide-react';
 import type { ReadinessSummary, ChecklistItem } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 import { isBndIdPlausible } from '@/lib/kfw/proof-submission';
@@ -9,7 +9,7 @@ type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 
 // ─── Action derivation ────────────────────────────────────────────────────────
 
-type ActionType = 'Dokument' | 'Prüfung' | 'BzA' | 'Nachweise' | 'Aufgabe';
+type ActionType = 'Dokument' | 'Prüfung' | 'BzA' | 'Nachweise' | 'Export' | 'Aufgabe';
 
 interface DerivedAction {
   label: string;
@@ -162,6 +162,21 @@ function deriveActions(
     }
   }
 
+  // 4c. Export CTA – final phases or BzA-ready
+  if (actions.length < 4) {
+    const payoutStatus = fundingCase.payout_status ?? 'pending';
+    const proofStatus2 = fundingCase.proof_submission_status ?? 'not_started';
+    const kfwStatus3   = fundingCase.kfw_application_status ?? 'not_started';
+
+    if (payoutStatus === 'paid') {
+      actions.push({ label: 'Förderakte exportieren / Fall abschließen', type: 'Export', href: '#export' });
+    } else if (proofStatus2 === 'submitted') {
+      actions.push({ label: 'Förderakte als Abschlussbericht exportieren', type: 'Export', href: '#export' });
+    } else if (kfwStatus3 === 'approved' || kfwStatus3 === 'submitted') {
+      actions.push({ label: 'Zwischenstatus exportieren', type: 'Export', href: '#export' });
+    }
+  }
+
   // 5. Open tasks (high priority first)
   if (actions.length < 4) {
     const openTasks = tasks
@@ -185,6 +200,7 @@ const TYPE_BADGE: Record<ActionType, string> = {
   Prüfung:   'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
   BzA:       'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
   Nachweise: 'bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300',
+  Export:    'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300',
   Aufgabe:   'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
 };
 
@@ -193,6 +209,7 @@ const TYPE_ICON: Record<ActionType, React.ReactNode> = {
   Prüfung:   <ScanSearch className="h-3.5 w-3.5" />,
   BzA:       <Settings className="h-3.5 w-3.5" />,
   Nachweise: <FileCheck className="h-3.5 w-3.5" />,
+  Export:    <Archive className="h-3.5 w-3.5" />,
   Aufgabe:   <ClipboardList className="h-3.5 w-3.5" />,
 };
 

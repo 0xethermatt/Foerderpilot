@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   ClipboardCheck,
   CheckCircle2,
+  Archive,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
@@ -19,6 +20,7 @@ import AIChecksSection from './AIChecksSection';
 import BzaPreparationSection from './BzaPreparationSection';
 import KfwApplicationPreparationSection from './KfwApplicationPreparationSection';
 import ProofSubmissionSection from './ProofSubmissionSection';
+import FundingCaseExportSection from './FundingCaseExportSection';
 import CaseCommandHeader from './CaseCommandHeader';
 import CaseWorkflowStepper from './CaseWorkflowStepper';
 import CaseWorkspace from './CaseWorkspace';
@@ -449,6 +451,31 @@ export default async function CaseDetailPage({
               />
             </CollapsibleCard>
           )}
+
+          {/* Förderakte Export – always available, collapsed by default */}
+          <CollapsibleCard
+            id="export"
+            title="Förderakte Export"
+            defaultOpen={false}
+            icon={<Archive className="h-4 w-4" />}
+            badge={
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                readiness.blocking_count > 0
+                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'
+                  : readiness.state === 'green'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+              }`}>
+                {readiness.blocking_count > 0 ? 'Mit offenen Punkten' : readiness.state === 'green' ? 'Bereit' : 'In Bearbeitung'}
+              </span>
+            }
+          >
+            <FundingCaseExportSection
+              caseId={fundingCase.id}
+              readinessLabel={readiness.label_de}
+              hasBlockers={readiness.blocking_count > 0}
+            />
+          </CollapsibleCard>
         </div>
 
         {/* ───────── Right sidebar ───────── */}
