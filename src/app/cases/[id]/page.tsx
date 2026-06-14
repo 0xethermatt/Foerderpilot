@@ -12,6 +12,7 @@ import TasksSection from './TasksSection';
 import DocumentsSection from './DocumentsSection';
 import FundingChecklistSection from './FundingChecklistSection';
 import AIChecksSection from './AIChecksSection';
+import BzaPreparationSection from './BzaPreparationSection';
 import CaseCommandHeader from './CaseCommandHeader';
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
@@ -326,6 +327,20 @@ export default async function CaseDetailPage({
               <AIChecksSection
                 caseId={fundingCase.id}
                 initialChecks={aiChecks}
+                readiness={readiness}
+              />
+            </div>
+
+            {/* BzA preparation – full width */}
+            <div className="2xl:col-span-2" id="bza-preparation">
+              <BzaPreparationSection
+                caseId={fundingCase.id}
+                fundingCase={fundingCase}
+                customer={customer ?? null}
+                documents={documents}
+                aiChecks={aiChecks}
+                tasks={tasks ?? []}
+                checklistItems={checklistItems}
                 readiness={readiness}
               />
             </div>

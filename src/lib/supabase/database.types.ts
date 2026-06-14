@@ -160,6 +160,7 @@ export interface Database {
           estimated_cost: number | null
           funding_amount: number | null
           notes: string | null
+          bza_responsible_party: string | null
           created_at: string
           updated_at: string
         }
@@ -184,6 +185,7 @@ export interface Database {
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
+          bza_responsible_party?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -208,6 +210,7 @@ export interface Database {
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
+          bza_responsible_party?: string | null
           created_at?: string
           updated_at?: string
         }
