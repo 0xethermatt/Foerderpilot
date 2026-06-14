@@ -104,8 +104,10 @@ function deriveActions(
     readiness.blocking_count === 0 &&
     readiness.needs_review_count === 0
   ) {
-    const bzaStatus = fundingCase.bza_status ?? 'not_started';
-    const kfwStatus = fundingCase.kfw_application_status ?? 'not_started';
+    const bzaStatus     = fundingCase.bza_status ?? 'not_started';
+    const kfwStatus     = fundingCase.kfw_application_status ?? 'not_started';
+    const bzaIdRaw      = fundingCase.bza_id ?? '';
+    const bzaIdPlausible = /^\d{15}$/.test(bzaIdRaw.replace(/[\s\-._]/g, ''));
 
     if (!fundingCase.bza_responsible_party || fundingCase.bza_responsible_party === 'unclear') {
       actions.push({
@@ -119,8 +121,10 @@ function deriveActions(
       if (bzaStatus === 'not_started') {
         actions.push({ label: 'BzA beim Fachunternehmen anfordern', type: 'BzA', href: '#kfw-application' });
       } else if (bzaStatus === 'requested') {
-        actions.push({ label: 'BzA-Referenznummer eintragen', type: 'BzA', href: '#kfw-application' });
-      } else if (bzaStatus === 'created' && kfwStatus === 'not_started') {
+        actions.push({ label: 'BzA-ID eintragen', type: 'BzA', href: '#kfw-application' });
+      } else if (bzaStatus === 'created' && !bzaIdPlausible) {
+        actions.push({ label: 'BzA-ID eintragen', type: 'BzA', href: '#kfw-application' });
+      } else if (bzaStatus === 'created' && bzaIdPlausible && kfwStatus === 'not_started') {
         actions.push({ label: 'KfW-Antrag vorbereiten', type: 'BzA', href: '#kfw-application' });
       } else if (kfwStatus === 'prepared') {
         actions.push({ label: 'Kundenanweisung senden', type: 'BzA', href: '#kfw-application' });

@@ -36,6 +36,7 @@ function deriveNextAction(
   status: FundingCaseStatus,
   bzaStatus: string,
   kfwStatus: string,
+  bzaId: string | null,
 ): string {
   if (status === 'completed') return 'Fall ist abgeschlossen.';
 
@@ -58,10 +59,12 @@ function deriveNextAction(
   if (status === 'proof_submitted') return 'Auf Auszahlung warten.';
 
   // BzA/KfW sub-step tracking
+  const bzaIdPlausible = /^\d{15}$/.test((bzaId ?? '').replace(/[\s\-._]/g, ''));
   if (kfwStatus === 'submitted') return 'Auf KfW-Förderzusage warten – kein Vorhabenbeginn.';
   if (kfwStatus === 'prepared')  return 'Kundenanweisung senden – Antrag durch Kunden in „Meine KfW" einreichen lassen.';
-  if (bzaStatus === 'created')   return 'KfW-Antrag intern vorbereiten.';
-  if (bzaStatus === 'requested') return 'Warte auf BzA – Referenznummer vom Fachunternehmen eintragen.';
+  if (bzaStatus === 'created' && bzaIdPlausible) return 'KfW-Antrag intern vorbereiten.';
+  if (bzaStatus === 'created')   return 'BzA-ID eintragen.';
+  if (bzaStatus === 'requested') return 'Warte auf BzA – BzA-ID vom Fachunternehmen eintragen.';
 
   return 'Unterlagen vollständig – BzA beim Fachunternehmen anfordern.';
 }
@@ -83,6 +86,7 @@ export default function CaseCommandHeader({
     fundingCase.status as FundingCaseStatus,
     fundingCase.bza_status ?? 'not_started',
     fundingCase.kfw_application_status ?? 'not_started',
+    fundingCase.bza_id ?? null,
   );
 
   const projectAddress = [

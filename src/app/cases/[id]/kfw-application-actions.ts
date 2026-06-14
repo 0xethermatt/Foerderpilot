@@ -21,12 +21,13 @@ export async function updateBzaIdAction(
 
   const bzaId       = (formData.get('bza_id') as string | null) ?? '';
   const bzaCreatedAt = (formData.get('bza_created_at') as string | null) ?? '';
+  const normalId    = bzaId.replace(/[\s\-._]/g, '');
 
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('funding_cases')
     .update({
-      bza_id:         bzaId       || null,
+      bza_id:         normalId    || null,
       bza_created_at: bzaCreatedAt || null,
     })
     .eq('id', caseId);
@@ -63,10 +64,18 @@ export async function markBzaCreatedAction(
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
 
+  const rawId    = (formData.get('bza_id') as string | null) ?? '';
+  const rawDate  = (formData.get('bza_created_at') as string | null) ?? '';
+  const normalId = rawId.replace(/[\s\-._]/g, '');
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('funding_cases')
-    .update({ bza_status: 'created' })
+    .update({
+      bza_status:     'created',
+      bza_id:         normalId || undefined,
+      bza_created_at: rawDate  || undefined,
+    })
     .eq('id', caseId);
 
   if (error) return { error: `Fehler: ${error.message}` };

@@ -21,8 +21,14 @@ export interface KfwApplicationPreparationState {
   kfwApplicationPreparedAt: string | null;
   kfwApplicationReference: string | null;
   bzaResponsibleParty: string | null;
+  bzaIdPlausible: boolean;
   isReadyForKfwPreparation: boolean;
   nextActionLabel: string;
+}
+
+export function isBzaIdPlausible(bzaId: string | null | undefined): boolean {
+  if (!bzaId) return false;
+  return /^\d{15}$/.test(bzaId.replace(/[\s\-._]/g, ''));
 }
 
 export function computeKfwApplicationPreparationState(
@@ -32,6 +38,7 @@ export function computeKfwApplicationPreparationState(
   const bzaStatus = fundingCase.bza_status ?? 'not_started';
   const kfwStatus = fundingCase.kfw_application_status ?? 'not_started';
   const docsComplete = readiness.blocking_count === 0 && readiness.needs_review_count === 0;
+  const bzaIdPlausible = isBzaIdPlausible(fundingCase.bza_id);
 
   let currentStep: KfwApplicationStep;
   let nextActionLabel: string;
@@ -50,10 +57,12 @@ export function computeKfwApplicationPreparationState(
     nextActionLabel = 'Antragsanweisung an Kunden senden, Einreichung in „Meine KfW" veranlassen';
   } else if (bzaStatus === 'created') {
     currentStep = 'bza_created';
-    nextActionLabel = 'KfW-Antrag intern vorbereiten und Kundenanweisung generieren';
+    nextActionLabel = bzaIdPlausible
+      ? 'KfW-Antrag intern vorbereiten und Kundenanweisung generieren'
+      : 'BzA-ID eintragen';
   } else if (bzaStatus === 'requested') {
     currentStep = 'bza_requested';
-    nextActionLabel = 'Auf BzA warten – BzA-Referenznummer vom Fachunternehmen eintragen';
+    nextActionLabel = 'Auf BzA warten – BzA-ID vom Fachunternehmen eintragen';
   } else {
     currentStep = 'bza_needed';
     nextActionLabel = 'BzA beim Fachunternehmen / Energieeffizienz-Experten anfordern';
@@ -68,7 +77,8 @@ export function computeKfwApplicationPreparationState(
     kfwApplicationPreparedAt: fundingCase.kfw_application_prepared_at ?? null,
     kfwApplicationReference: fundingCase.kfw_application_reference ?? null,
     bzaResponsibleParty: fundingCase.bza_responsible_party ?? null,
-    isReadyForKfwPreparation: docsComplete && bzaStatus === 'created',
+    bzaIdPlausible,
+    isReadyForKfwPreparation: docsComplete && bzaStatus === 'created' && bzaIdPlausible,
     nextActionLabel,
   };
 }

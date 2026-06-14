@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle2, Clock, AlertCircle, Copy, Check, RotateCcw, ChevronDown, ChevronUp,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   updateBzaIdAction,
@@ -100,22 +101,14 @@ function ErrorMsg({ msg }: { msg?: string }) {
 
 // ─── Copy button ──────────────────────────────────────────────────────────────
 
-function CopyButton({
-  text,
-  label,
-}: {
-  text: string;
-  label: string;
-}) {
+function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
-
   function handleCopy() {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   }
-
   return (
     <button
       onClick={handleCopy}
@@ -156,7 +149,73 @@ function SubSection({
   );
 }
 
-// ─── Instruction preview ──────────────────────────────────────────────────────
+// ─── BzA-ID input with validation ────────────────────────────────────────────
+
+function normalizeBzaId(raw: string): string {
+  return raw.replace(/[\s\-._]/g, '');
+}
+
+function BzaIdInput({
+  value,
+  onChange,
+  showDateField,
+  dateValue,
+  onDateChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  showDateField: boolean;
+  dateValue: string;
+  onDateChange: (v: string) => void;
+}) {
+  const normalized = normalizeBzaId(value);
+  const hasInput   = normalized.length > 0;
+  const isValid    = /^\d{15}$/.test(normalized);
+  const showWarn   = hasInput && !isValid;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap gap-2 items-end">
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">BzA-ID</label>
+          <input
+            name="bza_id"
+            type="text"
+            inputMode="numeric"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="15-stellige BzA-ID"
+            className={`text-xs rounded border px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 w-52 ${
+              showWarn
+                ? 'border-yellow-400 dark:border-yellow-600 focus:ring-yellow-400'
+                : 'border-gray-200 dark:border-gray-700 focus:ring-gray-400'
+            }`}
+          />
+        </div>
+        {showDateField && (
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Datum</label>
+            <input
+              name="bza_created_at"
+              type="date"
+              value={dateValue}
+              onChange={(e) => onDateChange(e.target.value)}
+              className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+            />
+          </div>
+        )}
+      </div>
+      {showWarn && (
+        <p className="flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-400">
+          <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+          Die BzA-ID sollte 15 Ziffern enthalten. ({normalized.length} Ziffern erkannt – Format nicht abschließend geprüft.)
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Customer instruction preview ────────────────────────────────────────────
 
 function InstructionPanel({
   fundingCase,
@@ -232,14 +291,14 @@ export default function KfwApplicationPreparationSection({
   }, [...allStates]);
 
   // ── Local state ──
-  const [bzaIdValue,  setBzaIdValue]  = useState(kfw.bzaId ?? '');
+  const [bzaIdValue,   setBzaIdValue]   = useState(kfw.bzaId ?? '');
   const [bzaDateValue, setBzaDateValue] = useState(kfw.bzaCreatedAt ?? '');
-  const [refValue,    setRefValue]    = useState(kfw.kfwApplicationReference ?? '');
-  const [bzaEditOpen, setBzaEditOpen] = useState(false);
-  const [resetOpen,   setResetOpen]   = useState(false);
+  const [refValue,     setRefValue]     = useState(kfw.kfwApplicationReference ?? '');
+  const [bzaEditOpen,  setBzaEditOpen]  = useState(false);
+  const [resetOpen,    setResetOpen]    = useState(false);
 
-  useEffect(() => { setBzaIdValue(kfw.bzaId ?? ''); },             [kfw.bzaId]);
-  useEffect(() => { setBzaDateValue(kfw.bzaCreatedAt ?? ''); },     [kfw.bzaCreatedAt]);
+  useEffect(() => { setBzaIdValue(kfw.bzaId ?? ''); },                [kfw.bzaId]);
+  useEffect(() => { setBzaDateValue(kfw.bzaCreatedAt ?? ''); },        [kfw.bzaCreatedAt]);
   useEffect(() => { setRefValue(kfw.kfwApplicationReference ?? ''); }, [kfw.kfwApplicationReference]);
 
   const bzaStatusVariant: 'gray' | 'yellow' | 'green' =
@@ -254,6 +313,12 @@ export default function KfwApplicationPreparationSection({
   const responsibleLabel = kfw.bzaResponsibleParty
     ? (BZA_RESPONSIBLE_LABELS[kfw.bzaResponsibleParty] ?? kfw.bzaResponsibleParty)
     : 'Noch nicht festgelegt';
+
+  // Button label for the mark-as-created button
+  const hasBzaIdInput = normalizeBzaId(bzaIdValue).length > 0;
+  const creButtonLabel = hasBzaIdInput
+    ? 'BzA-ID speichern und als erstellt markieren'
+    : 'BzA-Erstellung vermerken';
 
   return (
     <div className="space-y-4">
@@ -289,44 +354,23 @@ export default function KfwApplicationPreparationSection({
           </form>
         )}
 
-        {/* requested → BzA-ID form */}
+        {/* requested → BzA-ID entry + mark-as-created (single combined form) */}
         {kfw.bzaStatus === 'requested' && (
           <div className="space-y-3">
             <div className="flex items-start gap-2 text-xs text-yellow-800 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/60 rounded-md px-2.5 py-1.5">
               <Clock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-              Warte auf BzA-Erstellung durch das Fachunternehmen. Sobald die BzA-Referenznummer vorliegt, hier eintragen.
+              Warte auf BzA-Erstellung durch das Fachunternehmen. Sobald die BzA-ID vorliegt, hier eintragen.
             </div>
-            <form action={bzaIdAction} className="space-y-2">
+            <form action={creAction} className="space-y-2.5">
               <input type="hidden" name="case_id" value={caseId} />
-              <div className="flex flex-wrap gap-2 items-end">
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">BzA-Referenznummer</label>
-                  <input
-                    name="bza_id"
-                    type="text"
-                    value={bzaIdValue}
-                    onChange={(e) => setBzaIdValue(e.target.value)}
-                    placeholder="z. B. BZA-2024-XXXXX"
-                    className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400 w-48"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Datum BzA-Erstellung</label>
-                  <input
-                    name="bza_created_at"
-                    type="date"
-                    value={bzaDateValue}
-                    onChange={(e) => setBzaDateValue(e.target.value)}
-                    className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                  />
-                </div>
-                <SubmitBtn>Speichern</SubmitBtn>
-              </div>
-              <ErrorMsg msg={bzaIdState?.error} />
-            </form>
-            <form action={creAction}>
-              <input type="hidden" name="case_id" value={caseId} />
-              <PrimaryBtn>BzA als erstellt markieren</PrimaryBtn>
+              <BzaIdInput
+                value={bzaIdValue}
+                onChange={setBzaIdValue}
+                showDateField
+                dateValue={bzaDateValue}
+                onDateChange={setBzaDateValue}
+              />
+              <PrimaryBtn>{creButtonLabel}</PrimaryBtn>
               <ErrorMsg msg={creState?.error} />
             </form>
           </div>
@@ -340,9 +384,9 @@ export default function KfwApplicationPreparationSection({
                 <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                 <span className="text-gray-700 dark:text-gray-300">
                   {kfw.bzaId ? (
-                    <>Referenznummer: <span className="font-mono font-medium">{kfw.bzaId}</span></>
+                    <>BzA-ID: <span className="font-mono font-medium">{kfw.bzaId}</span></>
                   ) : (
-                    <span className="text-gray-400 dark:text-gray-500 italic">Referenznummer nicht eingetragen</span>
+                    <span className="text-orange-600 dark:text-orange-400 italic">BzA-ID noch nicht eingetragen</span>
                   )}
                 </span>
               </div>
@@ -352,32 +396,26 @@ export default function KfwApplicationPreparationSection({
                 </span>
               )}
             </div>
-            <SubSection title="BzA-Daten bearbeiten" open={bzaEditOpen} onToggle={() => setBzaEditOpen((v) => !v)}>
+            {/* Warn if bza created but ID missing or implausible */}
+            {!kfw.bzaIdPlausible && (
+              <div className="flex items-start gap-1.5 text-xs text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60 rounded-md px-2.5 py-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                {kfw.bzaId
+                  ? 'Die eingetragene BzA-ID enthält nicht 15 Ziffern – bitte prüfen.'
+                  : 'BzA-ID noch nicht eingetragen – bitte vor der KfW-Antragsvorbereitung ergänzen.'}
+              </div>
+            )}
+            <SubSection title="BzA-ID bearbeiten" open={bzaEditOpen} onToggle={() => setBzaEditOpen((v) => !v)}>
               <form action={bzaIdAction} className="space-y-2">
                 <input type="hidden" name="case_id" value={caseId} />
-                <div className="flex flex-wrap gap-2 items-end">
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">BzA-Referenznummer</label>
-                    <input
-                      name="bza_id"
-                      type="text"
-                      value={bzaIdValue}
-                      onChange={(e) => setBzaIdValue(e.target.value)}
-                      className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400 w-48"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Datum</label>
-                    <input
-                      name="bza_created_at"
-                      type="date"
-                      value={bzaDateValue}
-                      onChange={(e) => setBzaDateValue(e.target.value)}
-                      className="text-xs rounded border border-gray-200 dark:border-gray-700 px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                    />
-                  </div>
-                  <SubmitBtn>Speichern</SubmitBtn>
-                </div>
+                <BzaIdInput
+                  value={bzaIdValue}
+                  onChange={setBzaIdValue}
+                  showDateField
+                  dateValue={bzaDateValue}
+                  onDateChange={setBzaDateValue}
+                />
+                <SubmitBtn>BzA-ID speichern</SubmitBtn>
                 <ErrorMsg msg={bzaIdState?.error} />
               </form>
             </SubSection>
@@ -385,8 +423,8 @@ export default function KfwApplicationPreparationSection({
         )}
       </div>
 
-      {/* ── KfW-Antrag section (visible once BzA is created) ── */}
-      {(kfw.bzaStatus === 'created' || kfw.kfwApplicationStatus !== 'not_started') && (
+      {/* ── KfW-Antrag section (visible once BzA is created with plausible ID) ── */}
+      {(kfw.bzaStatus === 'created' && kfw.bzaIdPlausible) || kfw.kfwApplicationStatus !== 'not_started' ? (
         <div className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-4">
           <div className="flex items-center gap-2">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -398,7 +436,7 @@ export default function KfwApplicationPreparationSection({
             />
           </div>
 
-          {/* Customer instruction generator (always show when bza created) */}
+          {/* Customer instruction generator */}
           <InstructionPanel fundingCase={fundingCase} customer={customer} bzaId={kfw.bzaId} />
 
           {/* not_started → prepare form */}
@@ -423,7 +461,7 @@ export default function KfwApplicationPreparationSection({
             </form>
           )}
 
-          {/* prepared → waiting for customer to submit */}
+          {/* prepared → waiting for customer */}
           {kfw.kfwApplicationStatus === 'prepared' && (
             <div className="space-y-3">
               <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -469,13 +507,13 @@ export default function KfwApplicationPreparationSection({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ── Reset (collapsible) ── */}
       <SubSection title="Zurücksetzen" open={resetOpen} onToggle={() => setResetOpen((v) => !v)}>
         <div className="space-y-2">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Setzt BzA-Status, BzA-Referenznummer und KfW-Antragsstatus zurück. Keine Daten werden gelöscht außer den unten genannten Feldern.
+            Setzt BzA-Status, BzA-ID und KfW-Antragsstatus zurück. Keine weiteren Daten werden verändert.
           </p>
           <form action={resetAction}>
             <input type="hidden" name="case_id" value={caseId} />
