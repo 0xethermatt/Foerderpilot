@@ -10,14 +10,14 @@ type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 
 // ─── Post-application messages ────────────────────────────────────────────────
 
-const NEXT_BY_STATUS: Partial<Record<string, string>> = {
-  bza_prepared:             'BzA erstellt – Antrag im KfW-Portal „Meine KfW" manuell einreichen.',
-  application_submitted:    'Auf Förderzusage von KfW warten. Kein Vorhabenbeginn vor Zusage.',
-  approval_received:        'Förderzusage liegt vor – Ausführung freigeben und mit Umsetzung beginnen.',
-  execution_released:       'Umsetzung läuft – Nachweise vorbereiten.',
-  proof_documents_pending:  'Nachweise hochladen und einreichen.',
-  proof_submitted:          'Auf Auszahlung von KfW warten.',
-  completed:                'Fall abgeschlossen.',
+const NEXT_BY_STATUS: Partial<Record<string, { text: string; href?: string }>> = {
+  bza_prepared:             { text: 'BzA erstellt – Antrag im KfW-Portal „Meine KfW" manuell einreichen.' },
+  application_submitted:    { text: 'Auf Förderzusage von KfW warten. Kein Vorhabenbeginn vor Zusage.', href: '#proof-submission' },
+  approval_received:        { text: 'Förderzusage liegt vor – Ausführung freigeben und mit Umsetzung beginnen.', href: '#proof-submission' },
+  execution_released:       { text: 'Umsetzung läuft – Nachweise vorbereiten.', href: '#proof-submission' },
+  proof_documents_pending:  { text: 'Nachweise hochladen und einreichen.', href: '#proof-submission' },
+  proof_submitted:          { text: 'Auf Auszahlung von KfW warten.', href: '#proof-submission' },
+  completed:                { text: 'Fall abgeschlossen.' },
 };
 
 const POST_STATUSES = new Set([
@@ -161,8 +161,10 @@ function BzaReadyPanel({
 }) {
   // Context-aware headline + target section based on workflow sub-step
   const { headline, hint, href } = (() => {
+    if (caseKfwStatus === 'approved')
+      return { headline: 'Jetzt zu tun: Umsetzung starten', hint: 'Förderzusage erhalten – Umsetzung freigeben und Nachweisphase starten.', href: '#proof-submission' };
     if (caseKfwStatus === 'submitted')
-      return { headline: 'Auf KfW-Förderzusage warten', hint: 'Kein Vorhabenbeginn vor schriftlicher Förderzusage.', href: '#kfw-application' };
+      return { headline: 'Auf KfW-Förderzusage warten', hint: 'Kein Vorhabenbeginn vor schriftlicher Förderzusage.', href: '#proof-submission' };
     if (caseKfwStatus === 'prepared')
       return { headline: 'Jetzt zu tun: Kundenanweisung senden', hint: 'Antrag durch Kunden in „Meine KfW" einreichen lassen.', href: '#kfw-application' };
     if (caseBzaStatus === 'created')
@@ -211,7 +213,7 @@ function BzaReadyPanel({
 }
 
 function PostApplicationPanel({ status }: { status: string }) {
-  const nextAction = NEXT_BY_STATUS[status] ?? 'Weitere Schritte klären.';
+  const entry = NEXT_BY_STATUS[status] ?? { text: 'Weitere Schritte klären.' };
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
@@ -219,7 +221,16 @@ function PostApplicationPanel({ status }: { status: string }) {
         <Milestone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
         <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Nächster Schritt</h2>
       </div>
-      <p className="text-sm text-gray-700 dark:text-gray-300">{nextAction}</p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{entry.text}</p>
+      {entry.href && (
+        <a
+          href={entry.href}
+          className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 text-xs font-medium hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors"
+        >
+          <ArrowDown className="h-3.5 w-3.5" />
+          Zur Nachweisphase
+        </a>
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import TasksSection from './TasksSection';
 import AIChecksSection from './AIChecksSection';
 import BzaPreparationSection from './BzaPreparationSection';
 import KfwApplicationPreparationSection from './KfwApplicationPreparationSection';
+import ProofSubmissionSection from './ProofSubmissionSection';
 import CaseCommandHeader from './CaseCommandHeader';
 import CaseWorkflowStepper from './CaseWorkflowStepper';
 import CaseWorkspace from './CaseWorkspace';
@@ -28,6 +29,7 @@ import CollapsibleCard from './CollapsibleCard';
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import { computeBzaPreparation } from '@/lib/bza/preparation';
 import { computeKfwApplicationPreparationState } from '@/lib/kfw/application-preparation';
+import { computeKfwProofSubmissionState } from '@/lib/kfw/proof-submission';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
@@ -164,6 +166,9 @@ export default async function CaseDetailPage({
   const bzaPrep    = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
   const kfwPrep    = computeKfwApplicationPreparationState(fundingCase, readiness);
   const kfwAutoOpen = kfwPrep.bzaStatus !== 'not_started' || kfwPrep.kfwApplicationStatus !== 'not_started';
+  const proofPrep  = computeKfwProofSubmissionState(fundingCase);
+  const proofSectionVisible = kfwPrep.kfwApplicationStatus === 'submitted' || kfwPrep.kfwApplicationStatus === 'approved';
+  const proofAutoOpen = proofSectionVisible && proofPrep.currentStep !== 'waiting_for_approval';
 
   const projectAddress = [
     fundingCase.project_address_street,
@@ -188,6 +193,9 @@ export default async function CaseDetailPage({
         status={fundingCase.status as FundingCaseStatus}
         bzaStatus={fundingCase.bza_status ?? 'not_started'}
         kfwApplicationStatus={fundingCase.kfw_application_status ?? 'not_started'}
+        implementationStatus={fundingCase.implementation_status ?? 'not_started'}
+        proofSubmissionStatus={fundingCase.proof_submission_status ?? 'not_started'}
+        payoutStatus={fundingCase.payout_status ?? 'pending'}
       />
 
       {/* ── Main body grid ── */}
@@ -406,6 +414,41 @@ export default async function CaseDetailPage({
               readiness={readiness}
             />
           </CollapsibleCard>
+
+          {/* Proof submission – visible once KfW application is submitted */}
+          {proofSectionVisible && (
+            <CollapsibleCard
+              id="proof-submission"
+              title="Nachweisphase"
+              defaultOpen={proofAutoOpen}
+              icon={<ClipboardCheck className="h-4 w-4" />}
+              badge={
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                  proofPrep.payoutStatus === 'paid'                         ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                  : proofPrep.proofSubmissionStatus === 'submitted'         ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                  : proofPrep.proofSubmissionStatus === 'prepared'          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                  : proofPrep.implementationStatus === 'completed'          ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                  : proofPrep.implementationStatus === 'started'            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                  : proofPrep.kfwApplicationStatus === 'approved'           ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  {proofPrep.payoutStatus === 'paid'                      ? 'Ausgezahlt'
+                    : proofPrep.proofSubmissionStatus === 'submitted'     ? 'Eingereicht'
+                    : proofPrep.proofSubmissionStatus === 'prepared'      ? 'Vorbereitet'
+                    : proofPrep.implementationStatus === 'completed'      ? 'Umsetzung abgeschlossen'
+                    : proofPrep.implementationStatus === 'started'        ? 'Umsetzung läuft'
+                    : proofPrep.kfwApplicationStatus === 'approved'       ? 'Förderzusage erhalten'
+                    : 'Warte auf Förderzusage'}
+                </span>
+              }
+            >
+              <ProofSubmissionSection
+                caseId={fundingCase.id}
+                fundingCase={fundingCase}
+                customer={customer ?? null}
+              />
+            </CollapsibleCard>
+          )}
         </div>
 
         {/* ───────── Right sidebar ───────── */}

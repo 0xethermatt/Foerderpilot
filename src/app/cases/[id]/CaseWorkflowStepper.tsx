@@ -23,9 +23,13 @@ const POST_SUBMIT_STATUSES = new Set<string>([
 ]);
 const KFW_STATUSES = new Set<string>(['bza_prepared', 'application_submitted']);
 
-function resolveStep(readiness: ReadinessSummary, status: string): StepKey {
-  if (POST_SUBMIT_STATUSES.has(status)) return 'proof';
-  if (KFW_STATUSES.has(status))         return 'kfw';
+function resolveStep(
+  readiness: ReadinessSummary,
+  status: string,
+  kfwApplicationStatus: string,
+): StepKey {
+  if (POST_SUBMIT_STATUSES.has(status) || kfwApplicationStatus === 'approved') return 'proof';
+  if (KFW_STATUSES.has(status) || kfwApplicationStatus === 'submitted' || kfwApplicationStatus === 'prepared') return 'kfw';
   if (readiness.blocking_count === 0 && readiness.needs_review_count === 0) return 'bza';
   if (readiness.blocking_count === 0)   return 'review';
   return 'collect';
@@ -36,6 +40,9 @@ function getSublabel(
   readiness: ReadinessSummary,
   bzaStatus: string,
   kfwStatus: string,
+  implementationStatus: string,
+  proofSubmissionStatus: string,
+  payoutStatus: string,
 ): string | null {
   if (key === 'collect') {
     const n = readiness.blocking_count;
@@ -55,6 +62,15 @@ function getSublabel(
     if (kfwStatus === 'prepared')  return 'Bereit zur Einreichung';
     return 'Antrag vorbereiten';
   }
+  if (key === 'proof') {
+    if (payoutStatus === 'paid')                  return 'Ausgezahlt';
+    if (proofSubmissionStatus === 'submitted')    return 'Nachweise eingereicht';
+    if (proofSubmissionStatus === 'prepared')     return 'Nachweise bereit';
+    if (implementationStatus === 'completed')     return 'Umsetzung abgeschlossen';
+    if (implementationStatus === 'started')       return 'Umsetzung läuft';
+    if (kfwStatus === 'approved')                 return 'Umsetzung starten';
+    return 'Warte auf Förderzusage';
+  }
   return null;
 }
 
@@ -65,15 +81,21 @@ export default function CaseWorkflowStepper({
   status,
   bzaStatus = 'not_started',
   kfwApplicationStatus = 'not_started',
+  implementationStatus = 'not_started',
+  proofSubmissionStatus = 'not_started',
+  payoutStatus = 'pending',
 }: {
   readiness: ReadinessSummary;
   status: FundingCaseStatus;
   bzaStatus?: string;
   kfwApplicationStatus?: string;
+  implementationStatus?: string;
+  proofSubmissionStatus?: string;
+  payoutStatus?: string;
 }) {
-  const activeKey = resolveStep(readiness, status);
+  const activeKey = resolveStep(readiness, status, kfwApplicationStatus);
   const activeIdx = STEP_IDX[activeKey];
-  const sublabel  = getSublabel(activeKey, readiness, bzaStatus, kfwApplicationStatus);
+  const sublabel  = getSublabel(activeKey, readiness, bzaStatus, kfwApplicationStatus, implementationStatus, proofSubmissionStatus, payoutStatus);
 
   return (
     <nav aria-label="Workflow-Fortschritt" className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 px-4 py-3">

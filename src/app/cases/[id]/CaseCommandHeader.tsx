@@ -37,6 +37,10 @@ function deriveNextAction(
   bzaStatus: string,
   kfwStatus: string,
   bzaId: string | null,
+  implementationStatus: string,
+  bndId: string | null,
+  proofStatus: string,
+  payoutStatus: string,
 ): string {
   if (status === 'completed') return 'Fall ist abgeschlossen.';
 
@@ -50,18 +54,26 @@ function deriveNextAction(
     return `${n} Dokument${n > 1 ? 'e warten' : ' wartet'} auf Prüfung.`;
   }
 
-  // All before-application docs reviewed – show post-application status messages
-  if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
-  if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
-  if (status === 'approval_received') return 'Ausführung freigeben.';
-  if (status === 'execution_released') return 'Ausführung läuft – Nachweise vorbereiten.';
-  if (status === 'proof_documents_pending') return 'Nachweise hochladen und einreichen.';
-  if (status === 'proof_submitted') return 'Auf Auszahlung warten.';
+  // Proof phase (kfw approved or post-approval case statuses)
+  const bndPlausible = /^\d{15}$/.test((bndId ?? '').replace(/[\s\-._]/g, ''));
+  if (kfwStatus === 'approved' || status === 'approval_received' || status === 'execution_released' ||
+      status === 'proof_documents_pending' || status === 'proof_submitted') {
+    if (payoutStatus === 'paid') return 'Auszahlung eingegangen – Fall abschließen.';
+    if (proofStatus === 'submitted') return 'Auf Auszahlung von KfW warten.';
+    if (proofStatus === 'prepared') return 'Nachweise durch Kunden in „Meine KfW" einreichen lassen.';
+    if (bndPlausible) return 'Nachweise intern vorbereiten.';
+    if (implementationStatus === 'completed') return 'BnD-ID eintragen.';
+    if (implementationStatus === 'started') return 'Umsetzung abwarten – BnD anfordern.';
+    return 'Umsetzung starten – Förderzusage liegt vor.';
+  }
 
   // BzA/KfW sub-step tracking
-  const bzaIdPlausible = /^\d{15}$/.test((bzaId ?? '').replace(/[\s\-._]/g, ''));
+  if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
+  if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
   if (kfwStatus === 'submitted') return 'Auf KfW-Förderzusage warten – kein Vorhabenbeginn.';
   if (kfwStatus === 'prepared')  return 'Kundenanweisung senden – Antrag durch Kunden in „Meine KfW" einreichen lassen.';
+
+  const bzaIdPlausible = /^\d{15}$/.test((bzaId ?? '').replace(/[\s\-._]/g, ''));
   if (bzaStatus === 'created' && bzaIdPlausible) return 'KfW-Antrag intern vorbereiten.';
   if (bzaStatus === 'created')   return 'BzA-ID eintragen.';
   if (bzaStatus === 'requested') return 'Warte auf BzA – BzA-ID vom Fachunternehmen eintragen.';
@@ -87,6 +99,10 @@ export default function CaseCommandHeader({
     fundingCase.bza_status ?? 'not_started',
     fundingCase.kfw_application_status ?? 'not_started',
     fundingCase.bza_id ?? null,
+    fundingCase.implementation_status ?? 'not_started',
+    fundingCase.bnd_id ?? null,
+    fundingCase.proof_submission_status ?? 'not_started',
+    fundingCase.payout_status ?? 'pending',
   );
 
   const projectAddress = [
