@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  MoreHorizontal,
 } from 'lucide-react';
 import { uploadCaseDocumentAction, updateDocumentStatusAction } from './document-actions';
 import type { DocumentActionState, UpdateStatusState } from './document-actions';
@@ -30,16 +31,11 @@ type AICheckRow  = Database['public']['Tables']['ai_checks']['Row'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
 function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
-// Missing = orange (not red – it's normal, expected)
-// Rejected = red (action required)
+// Missing = orange (normal, expected); Rejected = red (action required)
 const STATUS_DOT: Record<string, string> = {
   missing:      'bg-orange-300 dark:bg-orange-600',
   needs_review: 'bg-yellow-400',
@@ -56,10 +52,15 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   missing:      'Offen',
-  needs_review: 'Prüfung ausstehend',
+  needs_review: 'Ausstehend',
   reviewed:     'Geprüft',
   rejected:     'Abgelehnt',
 };
+
+// ─── Column grid class – shared between header + rows ──────────────────────────
+// mobile: [name+status] [actions]
+// sm+:    [name] [file] [status] [KI] [actions]
+const COL_GRID = 'grid-cols-[1fr_auto] sm:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_5.5rem_8rem_auto]';
 
 // ─── AI check summary ─────────────────────────────────────────────────────────
 
@@ -154,9 +155,10 @@ function ContractCheckInlineButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex items-center gap-1 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 transition-colors"
+      className="inline-flex items-center gap-1 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 transition-colors whitespace-nowrap"
     >
-      <ScanSearch className="h-3 w-3" />{pending ? 'Läuft…' : 'Vertrag prüfen'}
+      <ScanSearch className="h-3 w-3 flex-shrink-0" />
+      {pending ? 'Läuft…' : 'Vertrag prüfen'}
     </button>
   );
 }
@@ -167,14 +169,15 @@ function OfferCheckInlineButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex items-center gap-1 rounded border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 disabled:opacity-50 transition-colors"
+      className="inline-flex items-center gap-1 rounded border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900 disabled:opacity-50 transition-colors whitespace-nowrap"
     >
-      <ScanSearch className="h-3 w-3" />{pending ? 'Läuft…' : 'Angebot prüfen'}
+      <ScanSearch className="h-3 w-3 flex-shrink-0" />
+      {pending ? 'Läuft…' : 'Angebot prüfen'}
     </button>
   );
 }
 
-// ─── Single document row ──────────────────────────────────────────────────────
+// ─── Single document row (compact table row) ──────────────────────────────────
 
 function DocRow({ item, doc, signedUrl, caseId, aiChecks, onUploadClick }: {
   item: ChecklistItem;
@@ -185,6 +188,7 @@ function DocRow({ item, doc, signedUrl, caseId, aiChecks, onUploadClick }: {
   onUploadClick: (docType: string) => void;
 }) {
   const router = useRouter();
+  const [moreOpen, setMoreOpen] = useState(false);
   const [contractState, contractFormAction] = useFormState<ContractCheckActionState, FormData>(runContractCheckAction, null);
   const [offerState, offerFormAction]       = useFormState<OfferCheckActionState, FormData>(runOfferCheckAction, null);
 
@@ -194,109 +198,139 @@ function DocRow({ item, doc, signedUrl, caseId, aiChecks, onUploadClick }: {
 
   const isContract = item.document_type === 'contract';
   const isOffer    = item.document_type === 'offer';
+  const isMissing  = item.status === 'missing';
+  const isRejected = item.status === 'rejected';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-3 gap-y-1 py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
-      {/* Left */}
-      <div className="flex items-start gap-2 min-w-0">
-        <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${STATUS_DOT[item.status] ?? 'bg-gray-300'}`} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.label_de}</span>
-            <span className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[item.status] ?? ''}`}>
-              {STATUS_LABEL[item.status] ?? item.status}
+    <div className={`border-b border-gray-50 dark:border-gray-800 last:border-0 transition-colors ${moreOpen ? 'bg-gray-50/70 dark:bg-gray-800/30' : ''}`}>
+      {/* ── Main compact row ── */}
+      <div className={`grid ${COL_GRID} items-center gap-x-3 py-2 min-h-[44px]`}>
+
+        {/* Col 1: dot + name (+ status + KI on mobile) */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`h-2 w-2 flex-shrink-0 rounded-full ${STATUS_DOT[item.status] ?? 'bg-gray-300'}`} />
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block truncate leading-snug">
+              {item.label_de}
             </span>
+            <div className="flex flex-wrap items-center gap-1.5 mt-0.5 sm:hidden">
+              <span className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[item.status] ?? ''}`}>
+                {STATUS_LABEL[item.status] ?? item.status}
+              </span>
+              <AICheckBadge aiChecks={aiChecks} docType={item.document_type} hasDoc={!!doc} />
+            </div>
           </div>
+        </div>
 
+        {/* Col 2: filename (sm+) */}
+        <div className="hidden sm:block min-w-0">
           {doc ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate" title={doc.name}>
-              {truncate(doc.name, 45)} · {formatDate(doc.uploaded_at)}
-            </p>
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate block" title={doc.name}>
+              {truncate(doc.name, 36)}
+            </span>
           ) : item.hint_de ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-0.5">{item.hint_de}</p>
-          ) : null}
+            <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate block">{item.hint_de}</span>
+          ) : (
+            <span className="text-xs text-gray-300 dark:text-gray-600">–</span>
+          )}
+        </div>
 
-          <div className="mt-1">
-            <AICheckBadge aiChecks={aiChecks} docType={item.document_type} hasDoc={!!doc} />
-          </div>
+        {/* Col 3: Status badge (sm+) */}
+        <div className="hidden sm:flex items-center">
+          <span className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE[item.status] ?? ''}`}>
+            {STATUS_LABEL[item.status] ?? item.status}
+          </span>
+        </div>
 
-          {doc && (
-            <div className="mt-1.5">
-              <StatusUpdateForm documentId={doc.id} caseId={caseId} currentStatus={doc.status} />
-            </div>
+        {/* Col 4: KI-Prüfung (sm+) */}
+        <div className="hidden sm:flex items-center">
+          <AICheckBadge aiChecks={aiChecks} docType={item.document_type} hasDoc={!!doc} />
+        </div>
+
+        {/* Col 5: Actions */}
+        <div className="flex items-center gap-1 justify-end flex-shrink-0">
+          {/* Upload for missing / rejected */}
+          {(isMissing || isRejected) && (
+            <button
+              type="button"
+              onClick={() => onUploadClick(item.document_type)}
+              className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium transition-colors ${
+                isRejected
+                  ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900'
+                  : 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900'
+              }`}
+            >
+              <Upload className="h-3 w-3 flex-shrink-0" />
+              <span className="hidden sm:inline">{isRejected ? 'Ersetzen' : 'Hochladen'}</span>
+            </button>
           )}
 
+          {/* AI check buttons */}
           {doc && isContract && (
-            <div className="mt-1.5">
-              <form action={contractFormAction} className="inline">
-                <input type="hidden" name="case_id" value={caseId} />
-                <input type="hidden" name="document_id" value={doc.id} />
-                <ContractCheckInlineButton />
-              </form>
-              {contractState?.success && (
-                <p className="mt-0.5 text-xs text-green-700 dark:text-green-400">
-                  Vertragsprüfung abgeschlossen – Ergebnis in KI-Prüfungen.
-                </p>
-              )}
-              {contractState?.error && (
-                <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{contractState.error}</p>
-              )}
-            </div>
+            <form action={contractFormAction} className="inline">
+              <input type="hidden" name="case_id" value={caseId} />
+              <input type="hidden" name="document_id" value={doc.id} />
+              <ContractCheckInlineButton />
+            </form>
+          )}
+          {doc && isOffer && (
+            <form action={offerFormAction} className="inline">
+              <input type="hidden" name="case_id" value={caseId} />
+              <input type="hidden" name="document_id" value={doc.id} />
+              <OfferCheckInlineButton />
+            </form>
           )}
 
-          {doc && isOffer && (
-            <div className="mt-1.5">
-              <form action={offerFormAction} className="inline">
-                <input type="hidden" name="case_id" value={caseId} />
-                <input type="hidden" name="document_id" value={doc.id} />
-                <OfferCheckInlineButton />
-              </form>
-              {offerState?.success && (
-                <p className="mt-0.5 text-xs text-green-700 dark:text-green-400">
-                  Angebotsprüfung abgeschlossen – Ergebnis in KI-Prüfungen.
-                </p>
-              )}
-              {offerState?.error && (
-                <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{offerState.error}</p>
-              )}
-            </div>
+          {/* Download */}
+          {signedUrl && (
+            <a
+              href={signedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Herunterladen"
+              className="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </a>
+          )}
+
+          {/* More: status / replace */}
+          {doc && (
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              title="Status ändern"
+              className={`p-1 rounded transition-colors ${
+                moreOpen
+                  ? 'text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+              }`}
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
       </div>
 
-      {/* Right: download / upload */}
-      <div className="flex items-start gap-2 sm:justify-end sm:pt-1 pl-4 sm:pl-0">
-        {signedUrl && (
-          <a
-            href={signedUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Herunterladen"
-            className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-          </a>
-        )}
-        {!doc && (
+      {/* ── Expanded panel: status form + replace ── */}
+      {moreOpen && doc && (
+        <div className="pb-2 pl-6 pr-3 flex flex-wrap items-center gap-2">
+          <StatusUpdateForm documentId={doc.id} caseId={caseId} currentStatus={doc.status} />
           <button
             type="button"
-            onClick={() => onUploadClick(item.document_type)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            onClick={() => { onUploadClick(item.document_type); setMoreOpen(false); }}
+            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors whitespace-nowrap"
           >
-            <Upload className="h-3.5 w-3.5" />Hochladen
+            Datei ersetzen
           </button>
-        )}
-        {doc && item.status !== 'reviewed' && (
-          <button
-            type="button"
-            onClick={() => onUploadClick(item.document_type)}
-            title="Ersatzdokument hochladen"
-            className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            <Upload className="h-3.5 w-3.5" />Ersetzen
-          </button>
-        )}
-      </div>
+          {contractState?.error && (
+            <p className="w-full text-xs text-red-600 dark:text-red-400">{contractState.error}</p>
+          )}
+          {offerState?.error && (
+            <p className="w-full text-xs text-red-600 dark:text-red-400">{offerState.error}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -387,6 +421,20 @@ function UploadSection({ caseId, preSelectedType, onClose }: {
   );
 }
 
+// ─── Table header row (desktop only) ──────────────────────────────────────────
+
+function TableHeader() {
+  return (
+    <div className={`hidden sm:grid ${COL_GRID} gap-x-3 pb-1.5 mb-0.5 border-b border-gray-100 dark:border-gray-800`}>
+      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide pl-4">Dokument</span>
+      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Datei</span>
+      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">Status</span>
+      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">KI-Prüfung</span>
+      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide text-right">Aktion</span>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CompactDocumentsTable({
@@ -402,8 +450,8 @@ export default function CompactDocumentsTable({
   signedUrls: Record<string, string>;
   aiChecks: AICheckRow[];
 }) {
-  const [uploadType,   setUploadType]   = useState<string | null>(null);
-  const [laterOpen,    setLaterOpen]    = useState(false);
+  const [uploadType, setUploadType] = useState<string | null>(null);
+  const [laterOpen,  setLaterOpen]  = useState(false);
   const uploadRef = useRef<HTMLDivElement>(null);
 
   function handleUploadClick(docType: string) {
@@ -419,7 +467,6 @@ export default function CompactDocumentsTable({
     if (item.latest_document_id) docByType[item.document_type] = docsById[item.latest_document_id];
   }
 
-  // Separate before-application (always visible) from later phases (collapsible)
   const beforeApp    = checklistItems.filter((i) => i.phase === 'before_application' && i.required);
   const laterItems   = checklistItems.filter((i) =>
     (i.phase === 'after_approval' || i.phase === 'after_completion') && i.required,
@@ -430,10 +477,22 @@ export default function CompactDocumentsTable({
   const uploadedAll  = documents.filter((d) => d.type !== 'other');
   const laterHasData = laterItems.some((i) => i.status !== 'missing') || otherUploaded.length > 0;
 
+  function rowProps(item: ChecklistItem) {
+    const doc = docByType[item.document_type];
+    return {
+      item,
+      doc,
+      signedUrl: doc ? signedUrls[doc.storage_path] : undefined,
+      caseId,
+      aiChecks,
+      onUploadClick: handleUploadClick,
+    };
+  }
+
   return (
-    <div id="documents" className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
+    <div id="documents" className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-4 sm:p-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Dokumente</h2>
@@ -454,27 +513,17 @@ export default function CompactDocumentsTable({
         </button>
       </div>
 
-      {/* Before-application required docs – always visible */}
-      <div className="mt-2">
-        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
-          Vor Antragstellung · Pflicht
-        </p>
+      {/* Before-application required docs + column headers */}
+      <div>
+        <TableHeader />
         {beforeApp.map((item) => (
-          <DocRow
-            key={item.document_type}
-            item={item}
-            doc={docByType[item.document_type]}
-            signedUrl={docByType[item.document_type] ? signedUrls[docByType[item.document_type]!.storage_path] : undefined}
-            caseId={caseId}
-            aiChecks={aiChecks}
-            onUploadClick={handleUploadClick}
-          />
+          <DocRow key={item.document_type} {...rowProps(item)} />
         ))}
       </div>
 
       {/* Later-phase docs – collapsible */}
       {(laterItems.length > 0 || otherUploaded.length > 0) && (
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
             onClick={() => setLaterOpen((v) => !v)}
@@ -485,35 +534,14 @@ export default function CompactDocumentsTable({
               : <ChevronDown className="h-3.5 w-3.5" />}
             Weitere Unterlagen später
             {laterHasData && (
-              <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
-                (teilweise vorhanden)
-              </span>
+              <span className="ml-0.5 text-xs font-normal">(teilweise vorhanden)</span>
             )}
           </button>
 
           {laterOpen && (
             <div className="mt-2">
-              {laterItems.map((item) => (
-                <DocRow
-                  key={item.document_type}
-                  item={item}
-                  doc={docByType[item.document_type]}
-                  signedUrl={docByType[item.document_type] ? signedUrls[docByType[item.document_type]!.storage_path] : undefined}
-                  caseId={caseId}
-                  aiChecks={aiChecks}
-                  onUploadClick={handleUploadClick}
-                />
-              ))}
-              {otherUploaded.map((item) => (
-                <DocRow
-                  key={item.document_type}
-                  item={item}
-                  doc={docByType[item.document_type]}
-                  signedUrl={docByType[item.document_type] ? signedUrls[docByType[item.document_type]!.storage_path] : undefined}
-                  caseId={caseId}
-                  aiChecks={aiChecks}
-                  onUploadClick={handleUploadClick}
-                />
+              {[...laterItems, ...otherUploaded].map((item) => (
+                <DocRow key={item.document_type} {...rowProps(item)} />
               ))}
             </div>
           )}
