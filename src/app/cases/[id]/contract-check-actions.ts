@@ -15,6 +15,7 @@ import type { Database, Json } from '@/lib/supabase/database.types';
 
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
 type DocumentRow    = Database['public']['Tables']['documents']['Row'];
+type AICheckRow     = Database['public']['Tables']['ai_checks']['Row'];
 
 export type ContractCheckActionState = {
   error?: string;
@@ -158,8 +159,23 @@ export async function runContractCheckAction(
     }
   }
 
+  // Log parsed result before insert (debug)
+  {
+    const rj = resultJson as Record<string, unknown> | null;
+    const fr  = rj?.funding_reservation as Record<string, unknown> | undefined;
+    console.log('[ContractCheck] Pre-insert result:', JSON.stringify({
+      status,
+      overall_assessment:  rj?.overall_assessment,
+      risk_level:          riskLevel,
+      confidence,
+      fr_present:          fr?.present,
+      fr_type:             fr?.type,
+      fr_kfw:              fr?.mentions_kfw_funding_approval,
+    }));
+  }
+
   // Insert ai_checks row
-  const { error: insertErr } = await supabase.from('ai_checks').insert({
+  const { data: insertedRow, error: insertErr } = await supabase.from('ai_checks').insert({
     case_id:             caseId,
     check_type:          'contract_check',
     provider:            provider.providerName,
@@ -173,11 +189,20 @@ export async function runContractCheckAction(
     rule_version:        CONTRACT_CHECK_RULE_VERSION,
     sources_used:        CONTRACT_CHECK_SOURCES_USED as unknown as Json,
     disclaimer:          CONTRACT_CHECK_DISCLAIMER,
-  });
+  }).select().single<AICheckRow>();
 
   if (insertErr) {
     return { error: `Fehler beim Speichern: ${insertErr.message}` };
   }
+
+  console.log('[ContractCheck] Insert succeeded:', {
+    id:           insertedRow?.id,
+    created_at:   insertedRow?.created_at,
+    check_type:   'contract_check',
+    risk_level:   insertedRow?.risk_level,
+    confidence:   insertedRow?.confidence,
+    human_review: insertedRow?.human_review_status,
+  });
 
   await logAudit(
     caseId,

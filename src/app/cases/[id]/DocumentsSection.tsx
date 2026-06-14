@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { FileText, Plus, ChevronUp, Download, ScanSearch } from 'lucide-react';
 import {
   uploadCaseDocumentAction,
@@ -220,6 +221,11 @@ function ContractCheckForm({ documentId, caseId }: { documentId: string; caseId:
     runContractCheckAction,
     null,
   );
+  const router = useRouter();
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
+
   return (
     <div className="mt-1.5">
       <form action={formAction}>
@@ -229,7 +235,7 @@ function ContractCheckForm({ documentId, caseId }: { documentId: string; caseId:
       </form>
       {state?.success && (
         <p className="mt-1 text-xs text-green-700 dark:text-green-400">
-          Vertragsprüfung gestartet – Ergebnis in KI-Prüfungen.
+          Vertragsprüfung abgeschlossen – Ergebnis in KI-Prüfungen.
         </p>
       )}
       {state?.error && (
@@ -260,6 +266,11 @@ function OfferCheckForm({ documentId, caseId }: { documentId: string; caseId: st
     runOfferCheckAction,
     null,
   );
+  const router = useRouter();
+  useEffect(() => {
+    if (state?.success) router.refresh();
+  }, [state?.success, router]);
+
   return (
     <div className="mt-1.5">
       <form action={formAction}>
@@ -269,7 +280,7 @@ function OfferCheckForm({ documentId, caseId }: { documentId: string; caseId: st
       </form>
       {state?.success && (
         <p className="mt-1 text-xs text-green-700 dark:text-green-400">
-          Angebotsprüfung gestartet – Ergebnis in KI-Prüfungen.
+          Angebotsprüfung abgeschlossen – Ergebnis in KI-Prüfungen.
         </p>
       )}
       {state?.error && (
