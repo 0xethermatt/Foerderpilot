@@ -15,7 +15,12 @@ function coerceArray() {
 
 function coerceNullableString() {
   return z.preprocess(
-    (v) => (v === undefined ? null : v),
+    (v) => {
+      if (v === undefined || v === null) return null;
+      if (typeof v === 'string') return v;
+      if (Array.isArray(v)) return v.filter((s) => typeof s === 'string').join(' ') || null;
+      return null;
+    },
     z.string().nullable(),
   );
 }

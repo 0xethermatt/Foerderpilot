@@ -12,7 +12,14 @@ function coerceArray() {
 
 function coerceNullableString() {
   return z.preprocess(
-    (v) => (v === undefined ? null : v),
+    (v) => {
+      if (v === undefined || v === null) return null;
+      if (typeof v === 'string') return v;
+      // AI occasionally returns an array of excerpts instead of a single string
+      if (Array.isArray(v)) return v.filter((s) => typeof s === 'string').join(' ') || null;
+      // Any other unexpected type (number, boolean, object) → null rather than crashing
+      return null;
+    },
     z.string().nullable(),
   );
 }
@@ -76,6 +83,36 @@ export const ContractCheckResultSchema = z.object({
   internal_notes_de:         coerceArray(),
   confidence:                z.enum(['low', 'medium', 'high']).catch('low'),
   human_review_required:     z.preprocess(() => true, z.literal(true)),
+}).transform((data): {
+  overall_assessment: 'pass' | 'needs_revision' | 'critical';
+  risk_level: 'green' | 'yellow' | 'red';
+  summary_de: string;
+  detected_contract_type: string | null;
+  contract_parties: { customer_name: string | null; contractor_name: string | null; project_address: string | null };
+  funding_reservation: { present: boolean; type: 'aufschiebend' | 'aufloesend' | 'both' | 'unclear' | 'missing'; mentions_kfw_funding_approval: boolean; relevant_excerpt_de: string | null; assessment_de: string };
+  premature_start_risk: { detected: boolean; severity: 'none' | 'low' | 'medium' | 'high'; problematic_excerpt_de: string | null; assessment_de: string };
+  implementation_period: { present: boolean; excerpt_de: string | null; assessment_de: string };
+  missing_or_unclear_items: string[];
+  critical_findings: string[];
+  recommended_changes: string[];
+  safe_clause_suggestion_de: string | null;
+  recommended_next_steps: string[];
+  customer_message_draft_de: string;
+  internal_notes_de: string[];
+  confidence: 'low' | 'medium' | 'high';
+  human_review_required: true;
+} => {
+  // Cross-field consistency guard (per KfW rule: absent funding reservation → not pass).
+  // If the AI returns overall_assessment='pass' but funding_reservation.present=false,
+  // downgrade to needs_revision so the UI is never self-contradictory.
+  if (data.overall_assessment === 'pass' && !data.funding_reservation.present) {
+    return {
+      ...data,
+      overall_assessment: 'needs_revision',
+      risk_level: data.risk_level === 'green' ? 'yellow' : data.risk_level,
+    };
+  }
+  return data;
 });
 
 export type ContractCheckResult = z.infer<typeof ContractCheckResultSchema>;
