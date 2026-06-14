@@ -31,7 +31,12 @@ function resolveStep(readiness: ReadinessSummary, status: string): StepKey {
   return 'collect';
 }
 
-function getSublabel(key: StepKey, readiness: ReadinessSummary): string | null {
+function getSublabel(
+  key: StepKey,
+  readiness: ReadinessSummary,
+  bzaStatus: string,
+  kfwStatus: string,
+): string | null {
   if (key === 'collect') {
     const n = readiness.blocking_count;
     return n === 1 ? '1 Unterlage fehlt' : `${n} Unterlagen fehlen`;
@@ -39,6 +44,16 @@ function getSublabel(key: StepKey, readiness: ReadinessSummary): string | null {
   if (key === 'review') {
     const n = readiness.needs_review_count;
     return n === 1 ? '1 Prüfung offen' : `${n} Prüfungen offen`;
+  }
+  if (key === 'bza') {
+    if (bzaStatus === 'created')   return 'BzA erstellt';
+    if (bzaStatus === 'requested') return 'BzA angefordert';
+    return 'BzA anfordern';
+  }
+  if (key === 'kfw') {
+    if (kfwStatus === 'submitted') return 'Warte auf Förderzusage';
+    if (kfwStatus === 'prepared')  return 'Bereit zur Einreichung';
+    return 'Antrag vorbereiten';
   }
   return null;
 }
@@ -48,13 +63,17 @@ function getSublabel(key: StepKey, readiness: ReadinessSummary): string | null {
 export default function CaseWorkflowStepper({
   readiness,
   status,
+  bzaStatus = 'not_started',
+  kfwApplicationStatus = 'not_started',
 }: {
   readiness: ReadinessSummary;
   status: FundingCaseStatus;
+  bzaStatus?: string;
+  kfwApplicationStatus?: string;
 }) {
   const activeKey = resolveStep(readiness, status);
   const activeIdx = STEP_IDX[activeKey];
-  const sublabel  = getSublabel(activeKey, readiness);
+  const sublabel  = getSublabel(activeKey, readiness, bzaStatus, kfwApplicationStatus);
 
   return (
     <nav aria-label="Workflow-Fortschritt" className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 px-4 py-3">

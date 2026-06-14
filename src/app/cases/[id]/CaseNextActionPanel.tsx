@@ -98,18 +98,33 @@ function deriveActions(
     }
   }
 
-  // 4. BzA actions (once docs are reviewed)
+  // 4. BzA / KfW actions (once docs are reviewed)
   if (
     actions.length < 4 &&
     readiness.blocking_count === 0 &&
     readiness.needs_review_count === 0
   ) {
+    const bzaStatus = fundingCase.bza_status ?? 'not_started';
+    const kfwStatus = fundingCase.kfw_application_status ?? 'not_started';
+
     if (!fundingCase.bza_responsible_party || fundingCase.bza_responsible_party === 'unclear') {
       actions.push({
         label: 'BzA-Verantwortlichen festlegen',
         type: 'BzA',
         href: '#bza-preparation',
       });
+    }
+
+    if (actions.length < 4) {
+      if (bzaStatus === 'not_started') {
+        actions.push({ label: 'BzA beim Fachunternehmen anfordern', type: 'BzA', href: '#kfw-application' });
+      } else if (bzaStatus === 'requested') {
+        actions.push({ label: 'BzA-Referenznummer eintragen', type: 'BzA', href: '#kfw-application' });
+      } else if (bzaStatus === 'created' && kfwStatus === 'not_started') {
+        actions.push({ label: 'KfW-Antrag vorbereiten', type: 'BzA', href: '#kfw-application' });
+      } else if (kfwStatus === 'prepared') {
+        actions.push({ label: 'Kundenanweisung senden', type: 'BzA', href: '#kfw-application' });
+      }
     }
   }
 

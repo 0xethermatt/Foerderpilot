@@ -17,6 +17,7 @@ import StatusRiskEditor from './StatusRiskEditor';
 import TasksSection from './TasksSection';
 import AIChecksSection from './AIChecksSection';
 import BzaPreparationSection from './BzaPreparationSection';
+import KfwApplicationPreparationSection from './KfwApplicationPreparationSection';
 import CaseCommandHeader from './CaseCommandHeader';
 import CaseWorkflowStepper from './CaseWorkflowStepper';
 import CaseWorkspace from './CaseWorkspace';
@@ -26,6 +27,7 @@ import CollapsibleCard from './CollapsibleCard';
 
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import { computeBzaPreparation } from '@/lib/bza/preparation';
+import { computeKfwApplicationPreparationState } from '@/lib/kfw/application-preparation';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
@@ -159,7 +161,9 @@ export default async function CaseDetailPage({
   const hasPendingAIReview  = aiChecks.some(
     (c) => c.status === 'completed' && c.human_review_status === 'pending',
   );
-  const bzaPrep = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
+  const bzaPrep    = computeBzaPreparation(checklistItems, readiness, documents, aiChecks);
+  const kfwPrep    = computeKfwApplicationPreparationState(fundingCase, readiness);
+  const kfwAutoOpen = kfwPrep.bzaStatus !== 'not_started' || kfwPrep.kfwApplicationStatus !== 'not_started';
 
   const projectAddress = [
     fundingCase.project_address_street,
@@ -182,6 +186,8 @@ export default async function CaseDetailPage({
       <CaseWorkflowStepper
         readiness={readiness}
         status={fundingCase.status as FundingCaseStatus}
+        bzaStatus={fundingCase.bza_status ?? 'not_started'}
+        kfwApplicationStatus={fundingCase.kfw_application_status ?? 'not_started'}
       />
 
       {/* ── Main body grid ── */}
@@ -365,6 +371,38 @@ export default async function CaseDetailPage({
               aiChecks={aiChecks}
               tasks={allTasks}
               checklistItems={checklistItems}
+              readiness={readiness}
+            />
+          </CollapsibleCard>
+
+          {/* KfW application preparation – auto-opens once BzA process started */}
+          <CollapsibleCard
+            id="kfw-application"
+            title="KfW-Antragsvorbereitung"
+            defaultOpen={kfwAutoOpen}
+            icon={<ClipboardCheck className="h-4 w-4" />}
+            badge={
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                kfwPrep.kfwApplicationStatus === 'approved'  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                : kfwPrep.kfwApplicationStatus === 'submitted' ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                : kfwPrep.kfwApplicationStatus === 'prepared'  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                : kfwPrep.bzaStatus === 'created'             ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'
+                : kfwPrep.bzaStatus === 'requested'           ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+              }`}>
+                {kfwPrep.kfwApplicationStatus === 'approved'  ? 'Förderzusage erhalten'
+                  : kfwPrep.kfwApplicationStatus === 'submitted' ? 'Antrag eingereicht'
+                  : kfwPrep.kfwApplicationStatus === 'prepared'  ? 'Vorbereitet'
+                  : kfwPrep.bzaStatus === 'created'             ? 'BzA erstellt'
+                  : kfwPrep.bzaStatus === 'requested'           ? 'BzA angefordert'
+                  : 'Nicht begonnen'}
+              </span>
+            }
+          >
+            <KfwApplicationPreparationSection
+              caseId={fundingCase.id}
+              fundingCase={fundingCase}
+              customer={customer ?? null}
               readiness={readiness}
             />
           </CollapsibleCard>

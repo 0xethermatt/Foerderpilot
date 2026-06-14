@@ -36,6 +36,8 @@ export type DbFundingCaseStatus =
   | 'completed'
 
 export type DbRiskLevel = 'green' | 'yellow' | 'red'
+export type DbBzaStatus = 'not_started' | 'requested' | 'created'
+export type DbKfwApplicationStatus = 'not_started' | 'prepared' | 'submitted' | 'approved'
 export type DbBuildingType = 'EFH' | 'MFH' | 'DHH' | 'RH' | 'WHG'
 export type DbOwnerStatus = 'owner' | 'owner_community' | 'other'
 export type DbCurrentHeatingType = 'gas' | 'oil' | 'electric' | 'district_heat' | 'heat_pump' | 'pellet' | 'other'
@@ -161,6 +163,12 @@ export interface Database {
           funding_amount: number | null
           notes: string | null
           bza_responsible_party: string | null
+          bza_id: string | null
+          bza_created_at: string | null
+          bza_status: string
+          kfw_application_status: string
+          kfw_application_prepared_at: string | null
+          kfw_application_reference: string | null
           created_at: string
           updated_at: string
         }
@@ -186,6 +194,12 @@ export interface Database {
           funding_amount?: number | null
           notes?: string | null
           bza_responsible_party?: string | null
+          bza_id?: string | null
+          bza_created_at?: string | null
+          bza_status?: string
+          kfw_application_status?: string
+          kfw_application_prepared_at?: string | null
+          kfw_application_reference?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -211,6 +225,12 @@ export interface Database {
           funding_amount?: number | null
           notes?: string | null
           bza_responsible_party?: string | null
+          bza_id?: string | null
+          bza_created_at?: string | null
+          bza_status?: string
+          kfw_application_status?: string
+          kfw_application_prepared_at?: string | null
+          kfw_application_reference?: string | null
           created_at?: string
           updated_at?: string
         }

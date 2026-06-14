@@ -7,8 +7,8 @@ import type { ReadinessSummary } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
-type CustomerRow = Database['public']['Tables']['customers']['Row'];
-type TaskRow = Database['public']['Tables']['tasks']['Row'];
+type CustomerRow    = Database['public']['Tables']['customers']['Row'];
+type TaskRow        = Database['public']['Tables']['tasks']['Row'];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -31,10 +31,15 @@ function ReadinessBadge({ readiness }: { readiness: ReadinessSummary }) {
   );
 }
 
-function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus): string {
+function deriveNextAction(
+  readiness: ReadinessSummary,
+  status: FundingCaseStatus,
+  bzaStatus: string,
+  kfwStatus: string,
+): string {
   if (status === 'completed') return 'Fall ist abgeschlossen.';
 
-  // Document completeness takes priority over status-based labels
+  // Document completeness takes priority
   if (readiness.blocking_count > 0) {
     const n = readiness.blocking_count;
     return `${n} Pflichtunterlage${n > 1 ? 'n fehlen' : ' fehlt'} – bitte beim Kunden anfordern.`;
@@ -44,7 +49,7 @@ function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus
     return `${n} Dokument${n > 1 ? 'e warten' : ' wartet'} auf Prüfung.`;
   }
 
-  // All before-application docs are reviewed – show post-application status messages
+  // All before-application docs reviewed – show post-application status messages
   if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
   if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
   if (status === 'approval_received') return 'Ausführung freigeben.';
@@ -52,8 +57,13 @@ function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus
   if (status === 'proof_documents_pending') return 'Nachweise hochladen und einreichen.';
   if (status === 'proof_submitted') return 'Auf Auszahlung warten.';
 
-  // For all pre-BzA statuses when docs are complete, the answer is: prepare BzA
-  return 'Unterlagen vollständig – BzA vorbereiten.';
+  // BzA/KfW sub-step tracking
+  if (kfwStatus === 'submitted') return 'Auf KfW-Förderzusage warten – kein Vorhabenbeginn.';
+  if (kfwStatus === 'prepared')  return 'Kundenanweisung senden – Antrag durch Kunden in „Meine KfW" einreichen lassen.';
+  if (bzaStatus === 'created')   return 'KfW-Antrag intern vorbereiten.';
+  if (bzaStatus === 'requested') return 'Warte auf BzA – Referenznummer vom Fachunternehmen eintragen.';
+
+  return 'Unterlagen vollständig – BzA beim Fachunternehmen anfordern.';
 }
 
 export default function CaseCommandHeader({
@@ -68,7 +78,12 @@ export default function CaseCommandHeader({
   readiness: ReadinessSummary;
 }) {
   const openTaskCount = tasks.filter((t) => !t.completed).length;
-  const nextAction = deriveNextAction(readiness, fundingCase.status as FundingCaseStatus);
+  const nextAction = deriveNextAction(
+    readiness,
+    fundingCase.status as FundingCaseStatus,
+    fundingCase.bza_status ?? 'not_started',
+    fundingCase.kfw_application_status ?? 'not_started',
+  );
 
   const projectAddress = [
     fundingCase.project_address_street,

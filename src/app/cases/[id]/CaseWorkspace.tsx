@@ -150,57 +150,61 @@ function BzaReadyPanel({
   readiness,
   bzaStatus,
   blockingWarnings,
+  caseBzaStatus,
+  caseKfwStatus,
 }: {
   readiness: ReadinessSummary;
   bzaStatus: 'bereit' | 'fast_bereit' | 'nicht_bereit';
   blockingWarnings: number;
+  caseBzaStatus: string;
+  caseKfwStatus: string;
 }) {
-  const cfg = {
-    bereit: {
-      border: 'border-green-200 dark:border-green-900',
-      badge:  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      label:  'BzA-Bereit',
-    },
-    fast_bereit: {
-      border: 'border-yellow-200 dark:border-yellow-900',
-      badge:  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      label:  'Fast BzA-Bereit',
-    },
-    nicht_bereit: {
-      border: 'border-orange-200 dark:border-orange-900',
-      badge:  'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      label:  'Punkte klären',
-    },
-  }[bzaStatus];
+  // Context-aware headline + target section based on workflow sub-step
+  const { headline, hint, href } = (() => {
+    if (caseKfwStatus === 'submitted')
+      return { headline: 'Auf KfW-Förderzusage warten', hint: 'Kein Vorhabenbeginn vor schriftlicher Förderzusage.', href: '#kfw-application' };
+    if (caseKfwStatus === 'prepared')
+      return { headline: 'Jetzt zu tun: Kundenanweisung senden', hint: 'Antrag durch Kunden in „Meine KfW" einreichen lassen.', href: '#kfw-application' };
+    if (caseBzaStatus === 'created')
+      return { headline: 'Jetzt zu tun: KfW-Antrag vorbereiten', hint: 'BzA erstellt – Kundenanweisung generieren und Antrag vorbereiten.', href: '#kfw-application' };
+    if (caseBzaStatus === 'requested')
+      return { headline: 'Warte auf BzA-Erstellung', hint: 'Sobald das Fachunternehmen die BzA erstellt hat, Referenznummer eintragen.', href: '#kfw-application' };
+    return {
+      headline: 'Jetzt zu tun: BzA vorbereiten',
+      hint: blockingWarnings > 0
+        ? `${blockingWarnings} Problem${blockingWarnings !== 1 ? 'e' : ''} in der BzA-Vorbereitung klären.`
+        : 'BzA beim Fachunternehmen / Energieexperten anfordern.',
+      href: '#bza-preparation',
+    };
+  })();
+
+  const borderCls =
+    caseKfwStatus === 'submitted' ? 'border-blue-200 dark:border-blue-900' :
+    bzaStatus === 'bereit' ? 'border-green-200 dark:border-green-900' :
+    bzaStatus === 'fast_bereit' ? 'border-yellow-200 dark:border-yellow-900' :
+    'border-orange-200 dark:border-orange-900';
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-lg border ${cfg.border} p-5`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`bg-white dark:bg-gray-900 rounded-lg border ${borderCls} p-5`}>
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Jetzt zu tun: BzA vorbereiten
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{headline}</h2>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            {readiness.reviewed_count}/{readiness.total_required_before_app} Pflichtunterlagen geprüft.{' '}
-            {blockingWarnings > 0
-              ? `${blockingWarnings} Problem${blockingWarnings !== 1 ? 'e' : ''} in der BzA-Vorbereitung klären.`
-              : 'BzA-Vorbereitung kann gestartet werden.'}
-          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{hint}</p>
         </div>
-        <span className={`inline-flex flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.badge}`}>
-          {cfg.label}
+        <span className="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500">
+          {readiness.reviewed_count}/{readiness.total_required_before_app} Unterlagen
         </span>
       </div>
 
       <a
-        href="#bza-preparation"
+        href={href}
         className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 text-xs font-medium hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors"
       >
         <ArrowDown className="h-3.5 w-3.5" />
-        BzA-Vorbereitung öffnen
+        Öffnen
       </a>
     </div>
   );
@@ -258,6 +262,8 @@ export default function CaseWorkspace({
       readiness={readiness}
       bzaStatus={bzaPrep.readinessStatus}
       blockingWarnings={blockingWarns}
+      caseBzaStatus={fundingCase.bza_status ?? 'not_started'}
+      caseKfwStatus={fundingCase.kfw_application_status ?? 'not_started'}
     />
   );
 }
