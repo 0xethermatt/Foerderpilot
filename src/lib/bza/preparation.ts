@@ -107,7 +107,7 @@ export function computeBzaPreparation(
       (d) => d.type === 'contract' && d.status !== 'missing',
     );
     if (hasContractDoc) {
-      warnings.push({ level: 'info', message: 'Vertragsprüfung noch nicht durchgeführt' });
+      warnings.push({ level: 'info', message: 'Optionale KI-Vertragsprüfung noch nicht durchgeführt' });
     }
   }
 
@@ -142,7 +142,7 @@ export function computeBzaPreparation(
       (d) => d.type === 'offer' && d.status !== 'missing',
     );
     if (hasOfferDoc) {
-      warnings.push({ level: 'info', message: 'Angebotsprüfung noch nicht durchgeführt' });
+      warnings.push({ level: 'info', message: 'Optionale KI-Angebotsprüfung noch nicht durchgeführt' });
     }
   }
 

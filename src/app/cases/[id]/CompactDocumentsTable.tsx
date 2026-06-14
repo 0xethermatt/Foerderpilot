@@ -63,18 +63,21 @@ const STATUS_LABEL: Record<string, string> = {
 
 // ─── AI check summary ─────────────────────────────────────────────────────────
 
-function AICheckBadge({ aiChecks, docType }: { aiChecks: AICheckRow[]; docType: string }) {
+function AICheckBadge({ aiChecks, docType, hasDoc }: { aiChecks: AICheckRow[]; docType: string; hasDoc: boolean }) {
   const checkType =
     docType === 'contract' ? 'contract_check' :
     docType === 'offer'    ? 'offer_check'    : null;
 
-  if (!checkType) return <span className="text-xs text-gray-300 dark:text-gray-600">–</span>;
+  if (!checkType) return null;
 
   const latest = aiChecks
     .filter((c) => c.check_type === checkType && c.status === 'completed')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-  if (!latest) return <span className="text-xs text-gray-400 dark:text-gray-500">Noch nicht geprüft</span>;
+  if (!latest) {
+    if (!hasDoc) return null;
+    return <span className="text-xs text-gray-400 dark:text-gray-500">Keine KI-Prüfung</span>;
+  }
 
   const review = latest.human_review_status;
   if (review === 'approved') {
@@ -214,7 +217,7 @@ function DocRow({ item, doc, signedUrl, caseId, aiChecks, onUploadClick }: {
           ) : null}
 
           <div className="mt-1">
-            <AICheckBadge aiChecks={aiChecks} docType={item.document_type} />
+            <AICheckBadge aiChecks={aiChecks} docType={item.document_type} hasDoc={!!doc} />
           </div>
 
           {doc && (

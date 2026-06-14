@@ -33,6 +33,8 @@ function ReadinessBadge({ readiness }: { readiness: ReadinessSummary }) {
 
 function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus): string {
   if (status === 'completed') return 'Fall ist abgeschlossen.';
+
+  // Document completeness takes priority over status-based labels
   if (readiness.blocking_count > 0) {
     const n = readiness.blocking_count;
     return `${n} Pflichtunterlage${n > 1 ? 'n fehlen' : ' fehlt'} – bitte beim Kunden anfordern.`;
@@ -41,17 +43,17 @@ function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus
     const n = readiness.needs_review_count;
     return `${n} Dokument${n > 1 ? 'e warten' : ' wartet'} auf Prüfung.`;
   }
-  if (status === 'lead_received' || status === 'data_missing') return 'Kundendaten vervollständigen.';
-  if (status === 'funding_check_done') return 'Angebot erstellen und Vertrag vorbereiten.';
-  if (status === 'offer_created' || status === 'contract_review_needed') return 'Vertrag prüfen und unterzeichnen.';
-  if (status === 'contract_signed') return 'BZA vorbereiten und Antrag stellen.';
+
+  // All before-application docs are reviewed – show post-application status messages
   if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
   if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
   if (status === 'approval_received') return 'Ausführung freigeben.';
   if (status === 'execution_released') return 'Ausführung läuft – Nachweise vorbereiten.';
   if (status === 'proof_documents_pending') return 'Nachweise hochladen und einreichen.';
   if (status === 'proof_submitted') return 'Auf Auszahlung warten.';
-  return 'Unterlagen vollständig – Antrag vorbereiten.';
+
+  // For all pre-BzA statuses when docs are complete, the answer is: prepare BzA
+  return 'Unterlagen vollständig – BzA vorbereiten.';
 }
 
 export default function CaseCommandHeader({
