@@ -2,15 +2,15 @@
 
 import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
-import { sendMagicLinkAction, passwordLoginAction } from './actions';
-import type { MagicLinkState, PasswordLoginState } from './actions';
+import { passwordLoginAction } from './actions';
+import type { PasswordLoginState } from './actions';
 
-// ─── URL error messages from the /auth/confirm callback or Supabase redirect ──
+// ─── URL error messages from /auth/confirm callback or Supabase redirect ──────
 
 const URL_ERROR_MESSAGES: Record<string, string> = {
-  link_expired: 'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
-  link_invalid: 'Ungültiger Anmelde-Link. Bitte fordern Sie einen neuen Link an.',
-  otp_expired:  'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
+  link_expired:  'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
+  link_invalid:  'Ungültiger Anmelde-Link. Bitte fordern Sie einen neuen Link an.',
+  otp_expired:   'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
   access_denied: 'Zugriff verweigert. Bitte prüfen Sie Ihren Anmelde-Link.',
 };
 
@@ -19,7 +19,7 @@ const URL_ERROR_MESSAGES: Record<string, string> = {
 const inputCls =
   'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:border-gray-500 dark:focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-500 dark:focus:ring-gray-400';
 
-// ─── Submit buttons ───────────────────────────────────────────────────────────
+// ─── Submit button ────────────────────────────────────────────────────────────
 
 function PasswordSubmitButton() {
   const { pending } = useFormStatus();
@@ -29,25 +29,12 @@ function PasswordSubmitButton() {
       disabled={pending}
       className="w-full rounded-md bg-gray-900 dark:bg-gray-100 px-4 py-2.5 text-sm font-medium text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200 disabled:opacity-50 transition-colors"
     >
-      {pending ? 'Anmelden…' : 'Mit Passwort anmelden'}
+      {pending ? 'Anmelden…' : 'Anmelden'}
     </button>
   );
 }
 
-function MagicLinkSubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex-shrink-0 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors whitespace-nowrap"
-    >
-      {pending ? 'Sende…' : 'Link senden'}
-    </button>
-  );
-}
-
-// ─── Password login form ──────────────────────────────────────────────────────
+// ─── Password form ────────────────────────────────────────────────────────────
 
 function PasswordForm({
   next,
@@ -111,44 +98,6 @@ function PasswordForm({
   );
 }
 
-// ─── Magic link form ──────────────────────────────────────────────────────────
-
-function MagicLinkForm() {
-  const [state, formAction] = useFormState<MagicLinkState, FormData>(sendMagicLinkAction, null);
-
-  if (state?.sent) {
-    return (
-      <p className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md px-3 py-2 text-center">
-        Link gesendet — bitte Posteingang (und Spam) prüfen.
-      </p>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      <form action={formAction} className="flex gap-2">
-        <input
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          placeholder="name@firma.de"
-          className={`${inputCls} flex-1 min-w-0`}
-        />
-        <MagicLinkSubmitButton />
-      </form>
-      {state?.error && (
-        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
-          {state.error}
-        </p>
-      )}
-      <p className="text-xs text-gray-400 dark:text-gray-500">
-        Falls kein Link ankommt oder das Limit erreicht ist, bitte den Passwort-Login verwenden.
-      </p>
-    </div>
-  );
-}
-
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function LoginForm({
@@ -164,34 +113,23 @@ export default function LoginForm({
     <div className="w-full max-w-sm space-y-6">
       {/* Brand */}
       <div className="text-center">
-        <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-2xl bg-white dark:bg-white shadow-sm border border-gray-100 dark:border-gray-200 p-1">
+        <div className="mx-auto mb-5 inline-flex items-center justify-center bg-white dark:bg-white rounded-2xl shadow-md px-6 py-4">
           <Image
-            src="/brand/foerderpilot-icon.png"
-            alt="Förderpilot Logo"
-            width={72}
-            height={72}
-            className="rounded-xl block"
+            src="/brand/foerderpilot-logo.png"
+            alt="Förderpilot"
+            width={192}
+            height={128}
+            className="block"
             priority
           />
         </div>
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Förderpilot</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Interne Förderakte für Heizungsförderung</p>
+        <h1 className="sr-only">Förderpilot</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Interne Förderakte für Heizungsförderung</p>
       </div>
 
-      {/* Primary: password login */}
+      {/* Login form */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-5 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Demo-Login mit Passwort
-        </p>
         <PasswordForm next={next} urlError={urlError} urlErrorDescription={urlErrorDescription} />
-      </div>
-
-      {/* Secondary: magic link */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Oder per Magic Link
-        </p>
-        <MagicLinkForm />
       </div>
 
       <p className="text-center text-xs text-gray-400 dark:text-gray-600">
