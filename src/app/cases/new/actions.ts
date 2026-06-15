@@ -4,10 +4,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
-
-// Dev fallback — matches the UUID in supabase/seed.sql
-const DEV_COMPANY_ID =
-  (process.env.DEFAULT_COMPANY_ID ?? '00000000-0000-0000-0000-000000000001').trim();
+import { requireUser, getUserCompanyId } from '@/lib/auth/session';
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -105,6 +102,12 @@ export async function createFundingCaseAction(
     };
   }
 
+  const user = await requireUser();
+  const companyId = await getUserCompanyId(user.id);
+  if (!companyId) {
+    return { message: 'Kein Unternehmen zugeordnet. Bitte kontaktieren Sie Ihren Administrator.' };
+  }
+
   // Normalize empty strings for optional fields
   const raw = Object.fromEntries(formData.entries());
   const normalized = {
@@ -129,7 +132,7 @@ export async function createFundingCaseAction(
   const { data: customer, error: customerErr } = await supabase
     .from('customers')
     .insert({
-      company_id: DEV_COMPANY_ID,
+      company_id: companyId,
       first_name: d.first_name,
       last_name: d.last_name,
       email: d.email,
@@ -153,7 +156,7 @@ export async function createFundingCaseAction(
   const { data: fundingCase, error: caseErr } = await supabase
     .from('funding_cases')
     .insert({
-      company_id: DEV_COMPANY_ID,
+      company_id: companyId,
       customer_id: customer.id,
       title,
       status: 'lead_received',

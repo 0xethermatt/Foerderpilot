@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import { extractPdfText } from '@/lib/documents/pdf-text';
 import { getAIProvider } from '@/lib/ai/provider';
 import {
@@ -54,6 +55,10 @@ export async function runContractCheckAction(
   if (!documentId || !/^[0-9a-f-]{36}$/i.test(documentId)) {
     return { error: 'Ungültige Dokument-ID.' };
   }
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
 

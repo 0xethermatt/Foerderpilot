@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import { computeChecklist, computeReadiness } from '@/lib/documents/checklist';
 import { getAIProvider } from '@/lib/ai/provider';
 import { RULE_VERSION, SOURCES_USED, DISCLAIMER } from '@/lib/ai/prompts/funding-precheck';
@@ -52,6 +53,10 @@ export async function runFundingPrecheckAction(
   if (!caseId || !/^[0-9a-f-]{36}$/i.test(caseId)) {
     return { error: 'Ungültige Fall-ID.' };
   }
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
 
@@ -198,6 +203,10 @@ export async function markAICheckApprovedAction(formData: FormData): Promise<voi
   const caseId  = formData.get('case_id')  as string;
   if (!checkId || !caseId) return;
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return;
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('ai_checks')
@@ -221,6 +230,10 @@ export async function markAICheckRejectedAction(formData: FormData): Promise<voi
   const checkId = formData.get('check_id') as string;
   const caseId  = formData.get('case_id')  as string;
   if (!checkId || !caseId) return;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return;
 
   const supabase = createServiceClient();
   const { error } = await supabase

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import type { DbDocumentStatus } from '@/lib/supabase/database.types';
 
 // ─── Task specs ───────────────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ export async function markAICheckDocumentReviewedAction(formData: FormData): Pro
   const checkId = formData.get('check_id') as string;
   const caseId  = formData.get('case_id')  as string;
   if (!checkId || !caseId) return;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return;
 
   const supabase = createServiceClient();
 
@@ -144,6 +149,10 @@ export async function markAICheckDocumentRejectedAction(formData: FormData): Pro
   const checkId = formData.get('check_id') as string;
   const caseId  = formData.get('case_id')  as string;
   if (!checkId || !caseId) return;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return;
 
   const supabase = createServiceClient();
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 
 export type BzaResponsiblePartyState = { success?: boolean; error?: string } | null;
 export type BzaTasksState            = { created?: number; skipped?: number; error?: string } | null;
@@ -22,6 +23,10 @@ export async function updateBzaResponsiblePartyAction(
   if (!ALLOWED_RESPONSIBLE.includes(value as typeof ALLOWED_RESPONSIBLE[number])) {
     return { error: 'Ungültiger Wert.' };
   }
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
   const { error } = await supabase
@@ -61,6 +66,10 @@ export async function createBzaTasksAction(
 
   const caseId = formData.get('case_id') as string;
   if (!caseId || !/^[0-9a-f-]{36}$/i.test(caseId)) return { error: 'Ungültige Fall-ID.' };
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
 

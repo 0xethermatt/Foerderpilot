@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import { getCurrentUser, signOutAction } from '@/lib/auth/session';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,7 +27,9 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
@@ -51,21 +54,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
                 {/* Nav */}
                 <nav className="flex items-center gap-1">
-                  <Link
-                    href="/dashboard"
-                    className="hidden sm:inline-flex items-center rounded-md px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-                  >
-                    Übersicht
-                  </Link>
-                  <Link
-                    href="/cases/new"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-gray-100 px-3 py-1.5 text-sm font-medium text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Neuer Förderfall</span>
-                    <span className="sm:hidden">Neu</span>
-                  </Link>
+                  {user && (
+                    <>
+                      <Link
+                        href="/dashboard"
+                        className="hidden sm:inline-flex items-center rounded-md px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                      >
+                        Übersicht
+                      </Link>
+                      <Link
+                        href="/cases/new"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 dark:bg-gray-100 px-3 py-1.5 text-sm font-medium text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Neuer Förderfall</span>
+                        <span className="sm:hidden">Neu</span>
+                      </Link>
+                    </>
+                  )}
                   <ThemeToggle />
+                  {user && (
+                    <form action={signOutAction}>
+                      <button
+                        type="submit"
+                        title={user.email ?? 'Abmelden'}
+                        className="inline-flex items-center rounded-md px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors max-w-[140px] truncate"
+                      >
+                        <span className="hidden sm:inline truncate">{user.email}</span>
+                        <span className="sm:hidden">Abmelden</span>
+                      </button>
+                    </form>
+                  )}
                 </nav>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,11 @@ export async function createTaskAction(
   }
 
   const { case_id, title, description, due_date, priority } = parsed.data;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return { error: accessError };
+
   const supabase = createServiceClient();
 
   const { error } = await supabase.from('tasks').insert({
@@ -94,6 +100,10 @@ export async function completeTaskAction(formData: FormData): Promise<void> {
   const case_id = formData.get('case_id') as string;
   if (!task_id || !case_id) return;
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return;
+
   const supabase = createServiceClient();
 
   await supabase
@@ -115,6 +125,10 @@ export async function reopenTaskAction(formData: FormData): Promise<void> {
   const task_id = formData.get('task_id') as string;
   const case_id = formData.get('case_id') as string;
   if (!task_id || !case_id) return;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return;
 
   const supabase = createServiceClient();
 

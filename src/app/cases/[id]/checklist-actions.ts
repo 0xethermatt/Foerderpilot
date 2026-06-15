@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import { computeChecklist, getBlockingTaskTitles, getNeedsReviewTaskTitles } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 
@@ -48,6 +49,10 @@ export async function createMissingDocumentTasksAction(
   if (!case_id || !/^[0-9a-f-]{36}$/i.test(case_id)) {
     return { error: 'Ungültige Fall-ID.' };
   }
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
 

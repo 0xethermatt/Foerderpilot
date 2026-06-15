@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 
 export type KfwActionState = { success?: boolean; error?: string } | null;
 
@@ -18,6 +19,10 @@ export async function updateBzaIdAction(
   if (!isServiceRoleConfigured()) return { error: 'Datenbankzugang nicht konfiguriert.' };
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const bzaId       = (formData.get('bza_id') as string | null) ?? '';
   const bzaCreatedAt = (formData.get('bza_created_at') as string | null) ?? '';
@@ -45,6 +50,10 @@ export async function markBzaRequestedAction(
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('funding_cases')
@@ -63,6 +72,10 @@ export async function markBzaCreatedAction(
   if (!isServiceRoleConfigured()) return { error: 'Datenbankzugang nicht konfiguriert.' };
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const rawId    = (formData.get('bza_id') as string | null) ?? '';
   const rawDate  = (formData.get('bza_created_at') as string | null) ?? '';
@@ -91,6 +104,10 @@ export async function markKfwApplicationPreparedAction(
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
+
   const reference = (formData.get('kfw_application_reference') as string | null) ?? '';
 
   const supabase = createServiceClient();
@@ -116,6 +133,10 @@ export async function markKfwApplicationSubmittedAction(
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('funding_cases')
@@ -134,6 +155,10 @@ export async function resetKfwApplicationPreparationAction(
   if (!isServiceRoleConfigured()) return { error: 'Datenbankzugang nicht konfiguriert.' };
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const supabase = createServiceClient();
   const { error } = await supabase

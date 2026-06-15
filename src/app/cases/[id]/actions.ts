@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,11 @@ export async function updateCaseStatusAction(
   }
 
   const { case_id, status, risk_level } = parsed.data;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return { error: accessError };
+
   const supabase = createServiceClient();
 
   // Fetch current values for audit log

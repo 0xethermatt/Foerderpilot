@@ -35,6 +35,7 @@ import { computeKfwProofSubmissionState } from '@/lib/kfw/proof-submission';
 import type { Database } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 import {
   BUILDING_TYPE_LABELS,
@@ -76,6 +77,8 @@ export default async function CaseDetailPage({
 }: {
   params: { id: string };
 }) {
+  const user = await requireUser();
+
   if (!isServiceRoleConfigured()) {
     return (
       <div className="max-w-2xl space-y-4">
@@ -101,6 +104,10 @@ export default async function CaseDetailPage({
       </div>
     );
   }
+
+  // Verify the authenticated user's company owns this case.
+  const accessError = await verifyCaseAccess(params.id, user.id);
+  if (accessError) notFound();
 
   const supabase = createServiceClient();
 

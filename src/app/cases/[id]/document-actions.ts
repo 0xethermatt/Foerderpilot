@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import type { DbDocumentType, DbDocumentStatus } from '@/lib/supabase/database.types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -124,6 +125,10 @@ export async function uploadCaseDocumentAction(
     return { error: 'Datei zu groß. Maximal 15 MB erlaubt.' };
   }
 
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return { error: accessError };
+
   const supabase = createServiceClient();
 
   const { data: caseRow } = await supabase
@@ -235,6 +240,10 @@ export async function updateDocumentStatusAction(
   const status      = formData.get('status')      as string;
 
   if (!document_id || !case_id || !VALID_STATUSES.has(status)) return null;
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(case_id, user.id);
+  if (accessError) return { tasksCompleted: 0, wasReviewed: false, error: accessError };
 
   const supabase = createServiceClient();
 

@@ -2,6 +2,7 @@
 
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, verifyCaseAccess } from '@/lib/auth/session';
 import { buildFundingCaseExportData } from '@/lib/export/funding-case-export';
 import { renderFundingCaseMarkdown, type ExportVariant } from '@/lib/export/funding-case-markdown';
 import type { Database } from '@/lib/supabase/database.types';
@@ -35,6 +36,10 @@ export async function generateFundingCaseMarkdownAction(
 
   const caseId = validCaseId(formData.get('case_id'));
   if (!caseId) return { error: 'Ungültige Fall-ID.' };
+
+  const user = await requireUser();
+  const accessError = await verifyCaseAccess(caseId, user.id);
+  if (accessError) return { error: accessError };
 
   const rawVariant = (formData.get('variant') as string | null) ?? 'internal';
   const variant: ExportVariant = ALLOWED_VARIANTS.includes(rawVariant as ExportVariant)

@@ -4,6 +4,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
+import { requireUser, getUserCompanyId } from '@/lib/auth/session';
 import type { Database } from '@/lib/supabase/database.types';
 import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 
@@ -274,6 +275,8 @@ function CasesList({ cases }: { cases: DashboardCase[] }) {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
+  const user = await requireUser();
+
   if (!isServiceRoleConfigured()) {
     return (
       <div className="space-y-4">
@@ -290,12 +293,29 @@ export default async function DashboardPage() {
     );
   }
 
+  const companyId = await getUserCompanyId(user.id);
+
+  if (!companyId) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Übersicht</h1>
+        <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-4 py-4">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Kein Unternehmen zugeordnet</p>
+          <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+            Ihr Konto ist keinem Unternehmen zugeordnet. Bitte kontaktieren Sie Ihren Administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const supabase = createServiceClient();
 
   const [casesResult, taskCountResult, upcomingTasksResult] = await Promise.all([
     supabase
       .from('funding_cases')
       .select()
+      .eq('company_id', companyId)
       .order('updated_at', { ascending: false }),
     supabase
       .from('tasks')
