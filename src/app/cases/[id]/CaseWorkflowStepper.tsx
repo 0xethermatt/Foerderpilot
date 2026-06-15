@@ -27,11 +27,15 @@ function resolveStep(
   readiness: ReadinessSummary,
   status: string,
   kfwApplicationStatus: string,
+  bzaStatus: string,
 ): StepKey {
   if (POST_SUBMIT_STATUSES.has(status) || kfwApplicationStatus === 'approved') return 'proof';
   if (KFW_STATUSES.has(status) || kfwApplicationStatus === 'submitted' || kfwApplicationStatus === 'prepared') return 'kfw';
-  if (readiness.blocking_count === 0 && readiness.needs_review_count === 0) return 'bza';
-  if (readiness.blocking_count === 0)   return 'review';
+  if (readiness.blocking_count === 0 && readiness.needs_review_count === 0) {
+    if (bzaStatus === 'created') return 'kfw';
+    return 'bza';
+  }
+  if (readiness.blocking_count === 0) return 'review';
   return 'collect';
 }
 
@@ -93,7 +97,7 @@ export default function CaseWorkflowStepper({
   proofSubmissionStatus?: string;
   payoutStatus?: string;
 }) {
-  const activeKey = resolveStep(readiness, status, kfwApplicationStatus);
+  const activeKey = resolveStep(readiness, status, kfwApplicationStatus, bzaStatus);
   const activeIdx = STEP_IDX[activeKey];
   const sublabel  = getSublabel(activeKey, readiness, bzaStatus, kfwApplicationStatus, implementationStatus, proofSubmissionStatus, payoutStatus);
 

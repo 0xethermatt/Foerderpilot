@@ -129,14 +129,32 @@ function UpcomingTasks({
   );
 }
 
+// ─── Workflow step derivation (no document loading needed) ────────────────────
+
+function deriveWorkflowStep(c: FundingCaseRow): string {
+  if (c.payout_status === 'paid')                    return 'Ausgezahlt';
+  if (c.proof_submission_status === 'submitted')     return 'Nachweise eingereicht';
+  if (c.proof_submission_status === 'prepared')      return 'Nachweise bereit';
+  if (c.implementation_status === 'completed')       return 'Umsetzung abgeschlossen';
+  if (c.implementation_status === 'started')         return 'Umsetzung läuft';
+  if (c.kfw_application_status === 'approved')       return 'Förderzusage erhalten';
+  if (c.kfw_application_status === 'submitted')      return 'Antrag eingereicht';
+  if (c.kfw_application_status === 'prepared')       return 'KfW vorbereitet';
+  if (c.bza_status === 'created')                    return 'BzA erstellt';
+  if (c.bza_status === 'requested')                  return 'BzA angefordert';
+  if (c.status === 'completed')                      return 'Abgeschlossen';
+  return 'Unterlagen & Prüfung';
+}
+
 // ─── Cases list (div-based for clickable rows + responsive cards) ──────────────
 
-const COL = 'sm:grid sm:grid-cols-[180px_1fr_120px_90px_48px_96px] sm:items-center sm:gap-4';
+const COL = 'sm:grid sm:grid-cols-[150px_1fr_110px_80px_140px_48px_88px] sm:items-center sm:gap-3';
 
 function CaseRow({ c }: { c: DashboardCase }) {
   const customerName = c.customer
     ? `${c.customer.last_name}, ${c.customer.first_name}`
     : '–';
+  const step = deriveWorkflowStep(c);
 
   return (
     <Link
@@ -145,7 +163,7 @@ function CaseRow({ c }: { c: DashboardCase }) {
     >
       {/* Mobile card */}
       <div className="sm:hidden px-4 py-3.5">
-        <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-start justify-between gap-3 mb-1.5">
           <div className="min-w-0">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
               {customerName}
@@ -158,6 +176,7 @@ function CaseRow({ c }: { c: DashboardCase }) {
             {formatDate(c.updated_at)}
           </p>
         </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">{step}</p>
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={c.status as FundingCaseStatus} />
           <RiskBadge risk={c.risk_level as RiskLevel} />
@@ -186,6 +205,7 @@ function CaseRow({ c }: { c: DashboardCase }) {
         <div className="flex">
           <RiskBadge risk={c.risk_level as RiskLevel} />
         </div>
+        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{step}</p>
         <div className="flex justify-center">
           {c.open_task_count > 0 ? (
             <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-xs font-semibold">
@@ -231,7 +251,7 @@ function CasesList({ cases }: { cases: DashboardCase[] }) {
     <div>
       {/* Desktop header row */}
       <div className={`hidden ${COL} pb-2.5 border-b border-gray-100 dark:border-gray-800`}>
-        {['Kunde', 'Fall', 'Status', 'Risiko', 'Aufgaben', 'Aktualisiert'].map((h) => (
+        {['Kunde', 'Fall', 'Status', 'Risiko', 'Schritt', 'Aufgaben', 'Aktualisiert'].map((h) => (
           <p
             key={h}
             className={`text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide ${h === 'Aufgaben' ? 'text-center' : ''}`}
