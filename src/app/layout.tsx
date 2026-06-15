@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import UserMenu from '@/components/layout/UserMenu';
 import { getCurrentUser, getUserCompanyInfo, signOutAction } from '@/lib/auth/session';
 import './globals.css';
 
@@ -59,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
                 {/* Nav */}
                 <nav className="flex items-center gap-1">
-                  {user && (
+                  {user ? (
                     <>
                       <Link
                         href="/dashboard"
@@ -75,34 +76,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                         <span className="hidden sm:inline">Neuer Förderfall</span>
                         <span className="sm:hidden">Neu</span>
                       </Link>
+                      <UserMenu
+                        userEmail={user.email ?? ''}
+                        companyName={companyInfo?.name ?? null}
+                        isDemo={isDemo}
+                        signOutAction={signOutAction}
+                      />
                     </>
-                  )}
-                  <ThemeToggle />
-                  {user && (
-                    <div className="flex items-center gap-2">
-                      <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 max-w-[280px]">
-                        <span className="truncate">{user.email}</span>
-                        {companyInfo && (
-                          <>
-                            <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">·</span>
-                            <span className="truncate">{companyInfo.name}</span>
-                          </>
-                        )}
-                        {isDemo && (
-                          <span className="flex-shrink-0 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                            Demo
-                          </span>
-                        )}
-                      </div>
-                      <form action={signOutAction}>
-                        <button
-                          type="submit"
-                          className="inline-flex items-center rounded-md px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-                        >
-                          Abmelden
-                        </button>
-                      </form>
-                    </div>
+                  ) : (
+                    <ThemeToggle />
                   )}
                 </nav>
               </div>
