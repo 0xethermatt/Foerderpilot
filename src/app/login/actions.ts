@@ -1,16 +1,19 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export type LoginState = {
+// ─── Magic link ───────────────────────────────────────────────────────────────
+
+export type MagicLinkState = {
   sent?: boolean;
   error?: string;
 } | null;
 
 export async function sendMagicLinkAction(
-  _prev: LoginState,
+  _prev: MagicLinkState,
   formData: FormData,
-): Promise<LoginState> {
+): Promise<MagicLinkState> {
   const email = (formData.get('email') as string | null)?.trim() ?? '';
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -32,11 +35,41 @@ export async function sendMagicLinkAction(
   });
 
   if (error) {
-    // Don't leak whether the email exists — always show a success message.
-    // Log server-side only.
     console.error('[magic-link]', error.message);
   }
 
-  // Return sent=true regardless to prevent email enumeration.
+  // Always return sent=true to prevent email enumeration.
   return { sent: true };
+}
+
+// ─── Password login ───────────────────────────────────────────────────────────
+
+export type PasswordLoginState = {
+  error?: string;
+} | null;
+
+export async function passwordLoginAction(
+  _prev: PasswordLoginState,
+  formData: FormData,
+): Promise<PasswordLoginState> {
+  const email    = (formData.get('email') as string | null)?.trim() ?? '';
+  const password = (formData.get('password') as string | null) ?? '';
+  const next     = (formData.get('next') as string | null) ?? '/dashboard';
+
+  if (!email || !password) {
+    return { error: 'E-Mail und Passwort sind erforderlich.' };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    console.error('[password-login]', error.message);
+    return { error: 'Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen.' };
+  }
+
+  // In a server action, cookies().set() calls made by the Supabase client
+  // (via setAll) are automatically included in the redirect response by Next.js.
+  const safeNext = next.startsWith('/') ? next : '/dashboard';
+  redirect(safeNext);
 }
