@@ -9,10 +9,6 @@ export const metadata: Metadata = {
   title: 'Förderpilot',
   description: 'Interne Förderakte für Heizungsförderung',
   applicationName: 'Förderpilot',
-  icons: {
-    icon: '/brand/foerderpilot-icon.png',
-    apple: '/brand/foerderpilot-icon.png',
-  },
 };
 
 // viewportFit=cover is required for env(safe-area-inset-bottom) to return
