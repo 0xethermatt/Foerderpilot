@@ -153,21 +153,6 @@ export default function LoginForm({
         <PasswordForm next={next} urlError={urlError} />
       </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-        <span className="text-xs text-gray-400 dark:text-gray-600">oder</span>
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-      </div>
-
-      {/* Secondary: magic link */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Alternativ: Magic Link senden
-        </p>
-        <MagicLinkForm />
-      </div>
-
       <p className="text-center text-xs text-gray-400 dark:text-gray-600">
         Nur für autorisierte Mitarbeiter. Kein öffentlicher Zugang.
       </p>
