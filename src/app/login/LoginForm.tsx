@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useFormState, useFormStatus } from 'react-dom';
 import { sendMagicLinkAction, passwordLoginAction } from './actions';
 import type { MagicLinkState, PasswordLoginState } from './actions';
@@ -163,8 +164,18 @@ export default function LoginForm({
     <div className="w-full max-w-sm space-y-6">
       {/* Brand */}
       <div className="text-center">
+        <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-2xl bg-white dark:bg-white shadow-sm border border-gray-100 dark:border-gray-200 p-1">
+          <Image
+            src="/brand/foerderpilot-icon.png"
+            alt="Förderpilot Logo"
+            width={72}
+            height={72}
+            className="rounded-xl block"
+            priority
+          />
+        </div>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Förderpilot</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Interne Förderakte</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Interne Förderakte für Heizungsförderung</p>
       </div>
 
       {/* Primary: password login */}

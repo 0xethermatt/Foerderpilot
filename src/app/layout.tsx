@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { getCurrentUser, getUserCompanyInfo, signOutAction } from '@/lib/auth/session';
@@ -7,7 +8,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Förderpilot',
-  description: 'Interne Verwaltung von Wärmepumpen-Förderanträgen',
+  description: 'Interne Förderakte für Heizungsförderung',
+  applicationName: 'Förderpilot',
+  icons: {
+    icon: '/brand/foerderpilot-icon.png',
+    apple: '/brand/foerderpilot-icon.png',
+  },
 };
 
 // viewportFit=cover is required for env(safe-area-inset-bottom) to return
@@ -45,8 +51,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex h-12 sm:h-14 items-center justify-between gap-4">
                 {/* Brand */}
-                <div className="flex items-center gap-3">
-                  <Link href="/dashboard" className="flex items-center gap-2.5 group">
+                <div className="flex items-center gap-2.5">
+                  <Link href="/dashboard" className="flex items-center gap-2 group" aria-label="Förderpilot Startseite">
+                    <div className="flex-shrink-0 rounded-lg bg-white dark:bg-white p-0.5 shadow-sm">
+                      <Image
+                        src="/brand/foerderpilot-icon.png"
+                        alt="Förderpilot Icon"
+                        width={28}
+                        height={28}
+                        className="rounded-md block"
+                        priority
+                      />
+                    </div>
                     <span className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                       Förderpilot
                     </span>
