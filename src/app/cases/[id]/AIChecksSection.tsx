@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { useState } from 'react';
-import { Bot, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, Info, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, Info, ArrowRight } from 'lucide-react';
 import {
   runFundingPrecheckAction,
   markAICheckApprovedAction,
@@ -1492,23 +1492,14 @@ export default function AIChecksSection({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-800 p-5">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <ShieldAlert className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">KI-Prüfungen</h2>
-        {checks.length > 0 && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">{checks.length}</span>
-        )}
-      </div>
-
+    <div className="space-y-3">
       {/* Disclaimer */}
-      <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 rounded-md px-2.5 py-1.5 mt-2">
+      <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 rounded-md px-2.5 py-1.5">
         KI-Ergebnis ist eine Vorprüfung. Keine Fördergarantie. Manuelle Prüfung erforderlich.
       </p>
 
       {/* Run KI-Fördercheck button */}
-      <form action={formAction} className="mt-3">
+      <form action={formAction}>
         <input type="hidden" name="case_id" value={caseId} />
         {state?.error && (
           <p className="text-xs text-red-600 dark:text-red-400 mb-1.5">
@@ -1520,17 +1511,17 @@ export default function AIChecksSection({
         <RunButton />
       </form>
 
-      {/* Checks list */}
+      {/* Checks list – open only when review is pending */}
       {checks.length === 0 ? (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Noch keine KI-Prüfung durchgeführt.</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">Noch keine KI-Prüfung durchgeführt.</p>
       ) : (
-        <div className="mt-3 space-y-2">
-          {checks.map((check, idx) => (
+        <div className="space-y-2">
+          {checks.map((check) => (
             <CheckCardRouter
               key={check.id}
               check={check}
               caseId={caseId}
-              defaultOpen={idx === 0}
+              defaultOpen={check.status === 'completed' && check.human_review_status === 'pending'}
               readiness={readiness}
             />
           ))}

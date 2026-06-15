@@ -7,8 +7,8 @@ import type { ReadinessSummary } from '@/lib/documents/checklist';
 import type { Database } from '@/lib/supabase/database.types';
 
 type FundingCaseRow = Database['public']['Tables']['funding_cases']['Row'];
-type CustomerRow = Database['public']['Tables']['customers']['Row'];
-type TaskRow = Database['public']['Tables']['tasks']['Row'];
+type CustomerRow    = Database['public']['Tables']['customers']['Row'];
+type TaskRow        = Database['public']['Tables']['tasks']['Row'];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -31,8 +31,20 @@ function ReadinessBadge({ readiness }: { readiness: ReadinessSummary }) {
   );
 }
 
-function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus): string {
+function deriveNextAction(
+  readiness: ReadinessSummary,
+  status: FundingCaseStatus,
+  bzaStatus: string,
+  kfwStatus: string,
+  bzaId: string | null,
+  implementationStatus: string,
+  bndId: string | null,
+  proofStatus: string,
+  payoutStatus: string,
+): string {
   if (status === 'completed') return 'Fall ist abgeschlossen.';
+
+  // Document completeness takes priority
   if (readiness.blocking_count > 0) {
     const n = readiness.blocking_count;
     return `${n} Pflichtunterlage${n > 1 ? 'n fehlen' : ' fehlt'} – bitte beim Kunden anfordern.`;
@@ -41,17 +53,32 @@ function deriveNextAction(readiness: ReadinessSummary, status: FundingCaseStatus
     const n = readiness.needs_review_count;
     return `${n} Dokument${n > 1 ? 'e warten' : ' wartet'} auf Prüfung.`;
   }
-  if (status === 'lead_received' || status === 'data_missing') return 'Kundendaten vervollständigen.';
-  if (status === 'funding_check_done') return 'Angebot erstellen und Vertrag vorbereiten.';
-  if (status === 'offer_created' || status === 'contract_review_needed') return 'Vertrag prüfen und unterzeichnen.';
-  if (status === 'contract_signed') return 'BZA vorbereiten und Antrag stellen.';
+
+  // Proof phase (kfw approved or post-approval case statuses)
+  const bndPlausible = /^\d{15}$/.test((bndId ?? '').replace(/[\s\-._]/g, ''));
+  if (kfwStatus === 'approved' || status === 'approval_received' || status === 'execution_released' ||
+      status === 'proof_documents_pending' || status === 'proof_submitted') {
+    if (payoutStatus === 'paid') return 'Auszahlung eingegangen – Fall abschließen.';
+    if (proofStatus === 'submitted') return 'Auf Auszahlung von KfW warten.';
+    if (proofStatus === 'prepared') return 'Nachweise durch Kunden in „Meine KfW" einreichen lassen.';
+    if (bndPlausible) return 'Nachweise intern vorbereiten.';
+    if (implementationStatus === 'completed') return 'BnD-ID eintragen.';
+    if (implementationStatus === 'started') return 'Umsetzung abwarten – BnD anfordern.';
+    return 'Umsetzung starten – Förderzusage liegt vor.';
+  }
+
+  // BzA/KfW sub-step tracking
   if (status === 'bza_prepared') return 'Antrag im KfW-Portal „Meine KfW" einreichen.';
   if (status === 'application_submitted') return 'Auf Förderzusage von KfW warten – kein Vorhabenbeginn.';
-  if (status === 'approval_received') return 'Ausführung freigeben.';
-  if (status === 'execution_released') return 'Ausführung läuft – Nachweise vorbereiten.';
-  if (status === 'proof_documents_pending') return 'Nachweise hochladen und einreichen.';
-  if (status === 'proof_submitted') return 'Auf Auszahlung warten.';
-  return 'Unterlagen vollständig – Antrag vorbereiten.';
+  if (kfwStatus === 'submitted') return 'Auf KfW-Förderzusage warten – kein Vorhabenbeginn.';
+  if (kfwStatus === 'prepared')  return 'Kundenanweisung senden – Antrag durch Kunden in „Meine KfW" einreichen lassen.';
+
+  const bzaIdPlausible = /^\d{15}$/.test((bzaId ?? '').replace(/[\s\-._]/g, ''));
+  if (bzaStatus === 'created' && bzaIdPlausible) return 'KfW-Antrag intern vorbereiten.';
+  if (bzaStatus === 'created')   return 'BzA-ID eintragen.';
+  if (bzaStatus === 'requested') return 'Warte auf BzA – BzA-ID vom Fachunternehmen eintragen.';
+
+  return 'Unterlagen vollständig – BzA beim Fachunternehmen anfordern.';
 }
 
 export default function CaseCommandHeader({
@@ -66,7 +93,17 @@ export default function CaseCommandHeader({
   readiness: ReadinessSummary;
 }) {
   const openTaskCount = tasks.filter((t) => !t.completed).length;
-  const nextAction = deriveNextAction(readiness, fundingCase.status as FundingCaseStatus);
+  const nextAction = deriveNextAction(
+    readiness,
+    fundingCase.status as FundingCaseStatus,
+    fundingCase.bza_status ?? 'not_started',
+    fundingCase.kfw_application_status ?? 'not_started',
+    fundingCase.bza_id ?? null,
+    fundingCase.implementation_status ?? 'not_started',
+    fundingCase.bnd_id ?? null,
+    fundingCase.proof_submission_status ?? 'not_started',
+    fundingCase.payout_status ?? 'pending',
+  );
 
   const projectAddress = [
     fundingCase.project_address_street,

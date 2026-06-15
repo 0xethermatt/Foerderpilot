@@ -36,6 +36,11 @@ export type DbFundingCaseStatus =
   | 'completed'
 
 export type DbRiskLevel = 'green' | 'yellow' | 'red'
+export type DbBzaStatus = 'not_started' | 'requested' | 'created'
+export type DbKfwApplicationStatus = 'not_started' | 'prepared' | 'submitted' | 'approved'
+export type DbImplementationStatus = 'not_started' | 'started' | 'completed'
+export type DbProofSubmissionStatus = 'not_started' | 'prepared' | 'submitted'
+export type DbPayoutStatus = 'pending' | 'paid'
 export type DbBuildingType = 'EFH' | 'MFH' | 'DHH' | 'RH' | 'WHG'
 export type DbOwnerStatus = 'owner' | 'owner_community' | 'other'
 export type DbCurrentHeatingType = 'gas' | 'oil' | 'electric' | 'district_heat' | 'heat_pump' | 'pellet' | 'other'
@@ -160,6 +165,22 @@ export interface Database {
           estimated_cost: number | null
           funding_amount: number | null
           notes: string | null
+          bza_responsible_party: string | null
+          bza_id: string | null
+          bza_created_at: string | null
+          bza_status: string
+          kfw_application_status: string
+          kfw_application_prepared_at: string | null
+          kfw_application_reference: string | null
+          kfw_approval_received_at: string | null
+          implementation_status: string
+          implementation_started_at: string | null
+          implementation_completed_at: string | null
+          bnd_id: string | null
+          bnd_created_at: string | null
+          proof_submission_status: string
+          proof_submitted_at: string | null
+          payout_status: string
           created_at: string
           updated_at: string
         }
@@ -184,6 +205,22 @@ export interface Database {
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
+          bza_responsible_party?: string | null
+          bza_id?: string | null
+          bza_created_at?: string | null
+          bza_status?: string
+          kfw_application_status?: string
+          kfw_application_prepared_at?: string | null
+          kfw_application_reference?: string | null
+          kfw_approval_received_at?: string | null
+          implementation_status?: string
+          implementation_started_at?: string | null
+          implementation_completed_at?: string | null
+          bnd_id?: string | null
+          bnd_created_at?: string | null
+          proof_submission_status?: string
+          proof_submitted_at?: string | null
+          payout_status?: string
           created_at?: string
           updated_at?: string
         }
@@ -208,6 +245,22 @@ export interface Database {
           estimated_cost?: number | null
           funding_amount?: number | null
           notes?: string | null
+          bza_responsible_party?: string | null
+          bza_id?: string | null
+          bza_created_at?: string | null
+          bza_status?: string
+          kfw_application_status?: string
+          kfw_application_prepared_at?: string | null
+          kfw_application_reference?: string | null
+          kfw_approval_received_at?: string | null
+          implementation_status?: string
+          implementation_started_at?: string | null
+          implementation_completed_at?: string | null
+          bnd_id?: string | null
+          bnd_created_at?: string | null
+          proof_submission_status?: string
+          proof_submitted_at?: string | null
+          payout_status?: string
           created_at?: string
           updated_at?: string
         }
