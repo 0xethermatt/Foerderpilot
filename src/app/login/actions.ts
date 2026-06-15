@@ -36,9 +36,17 @@ export async function sendMagicLinkAction(
 
   if (error) {
     console.error('[magic-link]', error.message);
+    const isRateLimited =
+      error.status === 429 || /rate.?limit|too many/i.test(error.message);
+    if (isRateLimited) {
+      return {
+        error:
+          'Der Anmelde-Link konnte nicht gesendet werden. Bitte später erneut versuchen oder Passwort-Login nutzen.',
+      };
+    }
   }
 
-  // Always return sent=true to prevent email enumeration.
+  // Return sent=true for all other cases to prevent email enumeration.
   return { sent: true };
 }
 

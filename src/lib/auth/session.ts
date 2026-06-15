@@ -30,6 +30,24 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
   return data?.company_id ?? null;
 }
 
+// Returns both company id and name for the given user in a single join.
+// Returns null if the user has no company_members entry.
+export async function getUserCompanyInfo(
+  userId: string,
+): Promise<{ id: string; name: string } | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from('company_members')
+    .select('company_id, companies(id, name)')
+    .eq('user_id', userId)
+    .limit(1)
+    .single();
+  if (!data) return null;
+  const company = Array.isArray(data.companies) ? data.companies[0] : data.companies;
+  if (!company) return null;
+  return { id: company.id, name: company.name };
+}
+
 // Verifies the authenticated user's company owns the given case.
 // Returns null on success, or an error string that can be returned as { error }.
 export async function verifyCaseAccess(

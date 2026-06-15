@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
   const next       = searchParams.get('next') ?? '/dashboard';
   const safeNext   = next.startsWith('/') ? next : '/dashboard';
 
-  console.log('[auth/confirm] reached — has code:', !!code, '| has token_hash:', !!token_hash, '| type:', type);
-
   if (!code && (!token_hash || !type)) {
-    console.error('[auth/confirm] missing params — redirecting to /login?error=link_invalid');
     return NextResponse.redirect(new URL('/login?error=link_invalid', request.url));
   }
 
@@ -61,10 +58,8 @@ export async function GET(request: NextRequest) {
 
   // Verify a session was actually created.
   const { data: { user } } = await supabase.auth.getUser();
-  console.log('[auth/confirm] auth success:', !authErrorMsg, '| user id exists:', !!user?.id);
 
   if (!user) {
-    console.error('[auth/confirm] no user after auth — redirecting to /login?error=link_expired');
     return NextResponse.redirect(new URL('/login?error=link_expired', request.url));
   }
 

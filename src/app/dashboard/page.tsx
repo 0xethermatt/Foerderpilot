@@ -4,7 +4,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import RiskBadge from '@/components/ui/RiskBadge';
 import { createServiceClient } from '@/lib/supabase/service-client';
 import { isServiceRoleConfigured } from '@/lib/supabase/safe-client';
-import { requireUser, getUserCompanyId } from '@/lib/auth/session';
+import { requireUser, getUserCompanyInfo } from '@/lib/auth/session';
 import type { Database } from '@/lib/supabase/database.types';
 import type { FundingCaseStatus, RiskLevel } from '@/lib/types';
 
@@ -272,6 +272,8 @@ function CasesList({ cases }: { cases: DashboardCase[] }) {
   );
 }
 
+const DEMO_COMPANY_ID = '00000000-0000-0000-0000-000000000001';
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -293,21 +295,39 @@ export default async function DashboardPage() {
     );
   }
 
-  const companyId = await getUserCompanyId(user.id);
+  const companyInfo = await getUserCompanyInfo(user.id);
 
-  if (!companyId) {
+  if (!companyInfo) {
+    const insertSql = `INSERT INTO company_members (company_id, user_id, role)\nVALUES ('<ihre-company-id>', '${user.id}', 'member');`;
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-xl">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Übersicht</h1>
-        <div className="rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-4 py-4">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Kein Unternehmen zugeordnet</p>
-          <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-            Ihr Konto ist keinem Unternehmen zugeordnet. Bitte kontaktieren Sie Ihren Administrator.
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-5 space-y-4">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Keine Firma zugeordnet</p>
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Ihr Konto ist noch keiner Firma zugeordnet. Bitten Sie Ihren Administrator, Sie über den Supabase SQL-Editor hinzuzufügen.
           </p>
+          <div className="space-y-2 text-xs">
+            <div className="bg-amber-100 dark:bg-amber-900/50 rounded-md p-3 space-y-1">
+              <p className="font-semibold text-amber-700 dark:text-amber-400">User-ID</p>
+              <p className="font-mono text-amber-800 dark:text-amber-300 select-all break-all">{user.id}</p>
+            </div>
+            <div className="bg-amber-100 dark:bg-amber-900/50 rounded-md p-3 space-y-1">
+              <p className="font-semibold text-amber-700 dark:text-amber-400">E-Mail</p>
+              <p className="font-mono text-amber-800 dark:text-amber-300 select-all break-all">{user.email}</p>
+            </div>
+            <div className="bg-amber-100 dark:bg-amber-900/50 rounded-md p-3 space-y-1">
+              <p className="font-semibold text-amber-700 dark:text-amber-400 mb-1">SQL-Beispiel</p>
+              <pre className="font-mono text-amber-800 dark:text-amber-300 whitespace-pre-wrap break-all">{insertSql}</pre>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
+  const companyId = companyInfo.id;
+  const isDemo = companyId === DEMO_COMPANY_ID;
 
   const supabase = createServiceClient();
 
@@ -371,6 +391,17 @@ export default async function DashboardPage() {
           Alle aktiven Fördervorbereitungsfälle auf einen Blick.
         </p>
       </div>
+
+      {isDemo && (
+        <div className="flex items-center gap-2.5 rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-3 py-2">
+          <span className="flex-shrink-0 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-semibold bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-300">
+            Demo
+          </span>
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Sie sehen Demo-Daten. Alle Fälle gehören zum Demo-Unternehmen.
+          </p>
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

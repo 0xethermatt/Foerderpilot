@@ -4,11 +4,13 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { sendMagicLinkAction, passwordLoginAction } from './actions';
 import type { MagicLinkState, PasswordLoginState } from './actions';
 
-// ─── URL error messages from the /auth/confirm callback ───────────────────────
+// ─── URL error messages from the /auth/confirm callback or Supabase redirect ──
 
 const URL_ERROR_MESSAGES: Record<string, string> = {
   link_expired: 'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
   link_invalid: 'Ungültiger Anmelde-Link. Bitte fordern Sie einen neuen Link an.',
+  otp_expired:  'Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte erneut anmelden.',
+  access_denied: 'Zugriff verweigert. Bitte prüfen Sie Ihren Anmelde-Link.',
 };
 
 // ─── Shared input style ───────────────────────────────────────────────────────
@@ -37,20 +39,28 @@ function MagicLinkSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+      className="flex-shrink-0 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors whitespace-nowrap"
     >
-      {pending ? 'Sende Link…' : 'Magic Link senden'}
+      {pending ? 'Sende…' : 'Link senden'}
     </button>
   );
 }
 
 // ─── Password login form ──────────────────────────────────────────────────────
 
-function PasswordForm({ next, urlError }: { next?: string; urlError?: string }) {
+function PasswordForm({
+  next,
+  urlError,
+  urlErrorDescription,
+}: {
+  next?: string;
+  urlError?: string;
+  urlErrorDescription?: string;
+}) {
   const [state, formAction] = useFormState<PasswordLoginState, FormData>(passwordLoginAction, null);
 
   const urlErrMsg = urlError
-    ? (URL_ERROR_MESSAGES[urlError] ?? 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.')
+    ? (URL_ERROR_MESSAGES[urlError] ?? urlErrorDescription ?? 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.')
     : undefined;
 
   const errorMessage = state?.error ?? urlErrMsg;
@@ -114,17 +124,27 @@ function MagicLinkForm() {
   }
 
   return (
-    <form action={formAction} className="flex gap-2">
-      <input
-        name="email"
-        type="email"
-        autoComplete="email"
-        required
-        placeholder="name@firma.de"
-        className={`${inputCls} flex-1`}
-      />
-      <MagicLinkSubmitButton />
-    </form>
+    <div className="space-y-2">
+      <form action={formAction} className="flex gap-2">
+        <input
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder="name@firma.de"
+          className={`${inputCls} flex-1 min-w-0`}
+        />
+        <MagicLinkSubmitButton />
+      </form>
+      {state?.error && (
+        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+          {state.error}
+        </p>
+      )}
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        Falls kein Link ankommt oder das Limit erreicht ist, bitte den Passwort-Login verwenden.
+      </p>
+    </div>
   );
 }
 
@@ -132,9 +152,11 @@ function MagicLinkForm() {
 
 export default function LoginForm({
   urlError,
+  urlErrorDescription,
   next,
 }: {
   urlError?: string;
+  urlErrorDescription?: string;
   next?: string;
 }) {
   return (
@@ -150,7 +172,15 @@ export default function LoginForm({
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           Demo-Login mit Passwort
         </p>
-        <PasswordForm next={next} urlError={urlError} />
+        <PasswordForm next={next} urlError={urlError} urlErrorDescription={urlErrorDescription} />
+      </div>
+
+      {/* Secondary: magic link */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          Oder per Magic Link
+        </p>
+        <MagicLinkForm />
       </div>
 
       <p className="text-center text-xs text-gray-400 dark:text-gray-600">
