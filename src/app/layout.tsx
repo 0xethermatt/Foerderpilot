@@ -53,16 +53,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 {/* Brand */}
                 <div className="flex items-center gap-2.5">
                   <Link href="/dashboard" className="flex items-center gap-2 group" aria-label="Förderpilot Startseite">
-                    <div className="flex-shrink-0 rounded-lg bg-white dark:bg-white p-0.5 shadow-sm">
-                      <Image
-                        src="/brand/foerderpilot-icon.png"
-                        alt="Förderpilot Icon"
-                        width={28}
-                        height={28}
-                        className="rounded-md block"
-                        priority
-                      />
-                    </div>
+                    <Image
+                      src="/brand/foerderpilot-icon.png"
+                      alt="Förderpilot Icon"
+                      width={40}
+                      height={40}
+                      className="block flex-shrink-0"
+                      priority
+                    />
                     <span className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                       Förderpilot
                     </span>
