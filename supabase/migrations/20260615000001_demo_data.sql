@@ -241,7 +241,7 @@ INSERT INTO funding_cases (
   'air_water', 'Vaillant aroTHERM plus VWL 55/5 AS',
   18500, 6200,
   'Testfall – Happy Path BzA-bereit. Alle 5 Pflichtunterlagen geprüft, KI-Checks freigegeben.',
-  'shk',
+  'specialist_company',
   'not_started', 'not_started', 'not_started', 'not_started', 'pending'
 ) ON CONFLICT (id) DO NOTHING;
 
@@ -381,7 +381,7 @@ INSERT INTO funding_cases (
   'air_water', 'Daikin Altherma 3 H HT',
   19800, 7000,
   'Testfall – KfW-Förderzusage erhalten. Umsetzung kann beginnen. BnD und Nachweise ausstehend.',
-  'shk',
+  'specialist_company',
   'created', '123456789012345', (NOW() - INTERVAL ''3 weeks'')::date,
   'approved', NOW() - INTERVAL ''3 weeks'', NOW() - INTERVAL ''1 week'',
   'not_started', 'not_started', 'pending'
