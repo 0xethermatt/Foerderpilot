@@ -315,7 +315,7 @@ INSERT INTO ai_checks (
     }',
     'Angebotsprüfung: Plausibel – alle KfW-Anforderungen erfüllt.',
     'green', 'high',
-    'approved', 'admin', NOW() - INTERVAL ''2 days'',
+    'approved', 'admin', NOW() - INTERVAL '2 days',
     'v1.0',
     'KI-gestützte Vorprüfung. Kein Ersatz für fachliche Beratung. Keine Fördergarantie.'
   ),
@@ -339,7 +339,7 @@ INSERT INTO ai_checks (
     }',
     'Vertragsprüfung: Fördervorbehalt plausibel – Vertrag KfW-geeignet.',
     'green', 'high',
-    'approved', 'admin', NOW() - INTERVAL ''2 days'',
+    'approved', 'admin', NOW() - INTERVAL '2 days',
     'v1.0',
     'KI-gestützte Vorprüfung. Kein Ersatz für fachliche Beratung. Keine Fördergarantie.'
   )
@@ -382,8 +382,8 @@ INSERT INTO funding_cases (
   19800, 7000,
   'Testfall – KfW-Förderzusage erhalten. Umsetzung kann beginnen. BnD und Nachweise ausstehend.',
   'specialist_company',
-  'created', '123456789012345', (NOW() - INTERVAL ''3 weeks'')::date,
-  'approved', NOW() - INTERVAL ''3 weeks'', NOW() - INTERVAL ''1 week'',
+  'created', '123456789012345', (NOW() - INTERVAL '3 weeks')::date,
+  'approved', NOW() - INTERVAL '3 weeks', NOW() - INTERVAL '1 week',
   'not_started', 'not_started', 'pending'
 ) ON CONFLICT (id) DO NOTHING;
 
@@ -462,7 +462,7 @@ INSERT INTO ai_checks (
     }',
     'Angebotsprüfung: Plausibel – alle KfW-Anforderungen erfüllt.',
     'green', 'high',
-    'approved', 'admin', NOW() - INTERVAL ''3 weeks'',
+    'approved', 'admin', NOW() - INTERVAL '3 weeks',
     'v1.0',
     'KI-gestützte Vorprüfung. Kein Ersatz für fachliche Beratung. Keine Fördergarantie.'
   ),
@@ -483,7 +483,7 @@ INSERT INTO ai_checks (
     }',
     'Vertragsprüfung: Fördervorbehalt plausibel – KfW-geeignet.',
     'green', 'high',
-    'approved', 'admin', NOW() - INTERVAL ''3 weeks'',
+    'approved', 'admin', NOW() - INTERVAL '3 weeks',
     'v1.0',
     'KI-gestützte Vorprüfung. Kein Ersatz für fachliche Beratung. Keine Fördergarantie.'
   )
