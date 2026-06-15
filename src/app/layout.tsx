@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import { getCurrentUser, getUserCompanyInfo, signOutAction } from '@/lib/auth/session';
@@ -52,15 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div className="flex h-12 sm:h-14 items-center justify-between gap-4">
                 {/* Brand */}
                 <div className="flex items-center gap-2.5">
-                  <Link href="/dashboard" className="flex items-center gap-2 group" aria-label="Förderpilot Startseite">
-                    <Image
-                      src="/brand/foerderpilot-icon.png"
-                      alt="Förderpilot Icon"
-                      width={40}
-                      height={40}
-                      className="block flex-shrink-0"
-                      priority
-                    />
+                  <Link href="/dashboard" className="flex items-center gap-2.5 group">
                     <span className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                       Förderpilot
                     </span>
